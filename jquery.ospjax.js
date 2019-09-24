@@ -276,7 +276,7 @@
             serverUrl:"",
             version: findVersion,
             type: "GET",
-            intervalMins: 10
+            intervalMins: 10   
         },
 
         /**
@@ -287,9 +287,9 @@
         sysVer: function (opt) {
             if (!!opt) {
                 $.extend(this.sysOpt, opt);
-                if (this.sysOpt.checkVer && this.sysVerCheckCount === 0) {
-                    this.sysVerCheckCount = 1;
-                    checkServerVersion(this, 5); //  5分钟后开始第一次检测
+                if (this.sysOpt.checkVer && this.sysVerCheckCount === 0) {                 
+                    // 初始化五分钟后开始首次检测  0- 首次传入时间间隔
+                    setTimeout(function() { checkServerVersion(osPjax, 0); }, 5 * 60 * 1000);               
                 }
                 return true;
             }
@@ -307,6 +307,7 @@
     function checkServerVersion(osPjax, mins) {
         var opt = osPjax.sysOpt;
 
+        // 如果第一次加载，使用设置默认时间间隔
         mins = mins === 0 ? opt.intervalMins : mins;
         osPjax.sysVerCheckCount += 1;
 
