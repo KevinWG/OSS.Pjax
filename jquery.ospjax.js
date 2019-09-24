@@ -289,7 +289,7 @@
                 $.extend(this.sysOpt, opt);
                 if (this.sysOpt.checkVer && this.sysVerCheckCount === 0) {
                     this.sysVerCheckCount = 1;
-                    checkServerVersion(this, 0);
+                    checkServerVersion(this, 5); //  5分钟后开始第一次检测
                 }
                 return true;
             }
