@@ -239,7 +239,7 @@
                     var con = formatContent(filterRes, opt, req, hr);
                     defer.resolve(con);
                 }
-            }).error(function(hr, textStatus, errMsg) {
+            }).fail(function(hr, textStatus, errMsg) {
                 defer.reject(errMsg, textStatus, hr);
             });
 
@@ -319,7 +319,7 @@
                 }
                 if (mins < 20) mins += 1;
             })
-            .error(function() {
+            .fail(function() {
                 if (mins > 8) mins -= 1;
             }).complete(function () {
                 setTimeout(function() { checkServerVersion(osPjax, mins); }, mins * 60 * 1000);
