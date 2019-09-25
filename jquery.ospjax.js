@@ -285,15 +285,17 @@
          * @returns {} 
          */
         sysVer: function (opt) {
+            var osPjax =this;
+            
             if (!!opt) {
-                $.extend(this.sysOpt, opt);
-                if (this.sysOpt.checkVer && this.sysVerCheckCount === 0) {                 
+                $.extend(osPjax.sysOpt, opt);
+                if (osPjax.sysOpt.checkVer && osPjax.sysVerCheckCount === 0) {                 
                     // 初始化五分钟后开始首次检测  0- 首次传入时间间隔
                     setTimeout(function() { checkServerVersion(osPjax, 0); }, 5 * 60 * 1000);               
                 }
                 return true;
             }
-            return this.SysOpt;
+            return osPjax.SysOpt;
         },
         sysVerCheckCount: 0
 };
