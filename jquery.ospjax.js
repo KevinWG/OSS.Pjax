@@ -424,11 +424,14 @@
             }
             if(!$html){
                 $html = $("<div></div>");
-            }
-            var titleReg=html.match(/<title[^>]*>([\s\S.]*)<\/title>/i);
-            if(titleReg&&titleReg.length>0 ){
-                $html.append(($(titleReg[0])));
-            }
+            }       
+        }
+        else{
+            $html = $(html);
+        }
+        var titleReg=html.match(/<title[^>]*>([\s\S.]*)<\/title>/i);
+        if(titleReg&&titleReg.length>0 ){
+            $html.append(($(titleReg[0])));
         }
 
         if (!$html.hasClass(opt.fragment))
