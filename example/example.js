@@ -1,12 +1,12 @@
- var OsPjax = {
+ var OssPjax = {
      instance: null,
     //  changeState: function(action, url, title) {
-    //      var state = this.instance.ospjax("state");
+    //      var state = this.instance.osspjax("state");
     //      if (url)
     //          state.url = url;
     //      if (title)
     //          state.title = title;
-    //      this.instance.ospjax("state", action, state);
+    //      this.instance.osspjax("state", action, state);
     //  },
      methods: {
         remoteError: function(eMsg, textState, xhr) {
@@ -33,22 +33,22 @@
          }
      },
      start: function(isDev) {
-        var osPjax = this;
+        var ossPjax = this;
          // 初始化实例
-         osPjax.instance = $(document).ospjax({
+         ossPjax.instance = $(document).osspjax({
              wraper: "#oss-page-wraper",
              nameSpc: "oss-pjax",
-             method: osPjax.methods
+             method: ossPjax.methods
          });
 
          // 定义全局goTo方法
          window.goTo = function(url, title) {
-             osPjax.instance.ospjax("goTo", { url: url, title: title });
+             ossPjax.instance.osspjax("goTo", { url: url, title: title });
          };
          if (!isDev) { //  自动获取版本
              OsApi.isDebug = false;
-             osPjax.instance.ospjax("sysVer", { checkVer: true, serverUrl: "/home/opv" });
+            // ossPjax.instance.osspjax("sysVer", { checkVer: true, serverUrl: "/home/opv" });
          }
      }
  };
- OsPjax.start(1);
+ OssPjax.start(1);

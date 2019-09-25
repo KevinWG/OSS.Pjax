@@ -7,7 +7,7 @@
 
         nameSpc: "oss-pjax",
         wraper: "#oss-wraper",
-        fragment: "ospjax-container",
+        fragment: "osspjax-container",
 
         ajaxSetting: {
             timeout: 0,
@@ -84,7 +84,7 @@
         }
     };
     
-    var OSPjax = function(element, opt) {
+    var OssPjax = function(element, opt) {
         var self = this;
         self.opt = opt;
 
@@ -101,7 +101,7 @@
     };
     // 实例属性： state 是当前页面信息，   xhr 远程请求实体信息
     // 原型属性： haveSysVerCheck  是否已经开启服务器版本检查
-    OSPjax.prototype = {
+    OssPjax.prototype = {
         click: function(event) {            
             var req = formatLinkEvent(event);
             if (!req)
@@ -123,39 +123,39 @@
          * @returns {} 
          */
         goTo: function(req) {
-            var osPjax = this;
+            var ossPjax = this;
             //  处理请求地址参数
-            setReqUrl(osPjax.opt, req);
+            setReqUrl(ossPjax.opt, req);
 
-            osPjax.getContent(req).then(function(con) {
-                checkContentVsersion(osPjax.sysOpt, con);
-                var opt = osPjax.opt;
+            ossPjax.getContent(req).then(function(con) {
+                checkContentVsersion(ossPjax.sysOpt, con);
+                var opt = ossPjax.opt;
                 if (!req.popState) {
                     if (opt.push || opt.replace) {
-                        var newState = setPageState(osPjax, con);
+                        var newState = setPageState(ossPjax, con);
                         if (opt.push)
                             window.history.pushState(newState, newState.title, newState.url);
                         else if (opt.replace)
                             window.history.replaceState(newState, newState.title, newState.url);  
                     }
                 } else {
-                    setPageState(osPjax, null, req.popState);
+                    setPageState(ossPjax, null, req.popState);
                 }
 
                 if (con.title && (opt.push || opt.replace))
                     document.title = con.title;
 
                 var animation = opt.animation && !req.no_animation;
-                osPjax.replaceContent(con, animation);
+                ossPjax.replaceContent(con, animation);
 
             }).fail(function(errMsg, textStatus, hr) {
-                osPjax.opt.method.remoteError(errMsg, textStatus, hr);
+                ossPjax.opt.method.remoteError(errMsg, textStatus, hr);
             });
         },
 
         replaceContent: function(con, animation) {
-            var osPjax = this;
-            var opt = osPjax.opt;
+            var ossPjax = this;
+            var opt = ossPjax.opt;
 
             var $wraper = $(opt.wraper);
             //  防止翻页过快导致的页面同时出现两个相同的模块
@@ -174,11 +174,11 @@
                 $oldContainer.remove();
             }
 
-            osPjax.opt.method.cssLoading(con);
+            ossPjax.opt.method.cssLoading(con);
             con.content.prepend(con.css);
             con.content.appendTo($wraper);
 
-            osPjax.opt.method.scriptLoading(con);
+            ossPjax.opt.method.scriptLoading(con);
             con.content.append(con.scripts);
 
             if (animation) {
@@ -187,11 +187,11 @@
                     function() {
                         $oldContainer.remove();
                         con.content.show(); //  以确保没有问题
-                        opt.method.complete(osPjax.pageState);
+                        opt.method.complete(ossPjax.pageState);
                     });
             } else {
                 con.content.show(); //  以确保没有问题
-                opt.method.complete(osPjax.pageState);
+                opt.method.complete(ossPjax.pageState);
             }
 
         },
@@ -201,13 +201,13 @@
          * @returns {}  promise对象
          */
         getContent: function(req) {
-            var osPjax = this;
-            var opt = osPjax.opt;
+            var ossPjax = this;
+            var opt = ossPjax.opt;
 
             var ajaxOpt = $.extend({}, { url: req.remote_url }, opt.ajaxSetting);
 
             // 附加数据，版本号处理
-            var ver = typeof osPjax.sysOpt.version == "function" ? osPjax.sysOpt.version() : osPjax.sysOpt.version;
+            var ver = typeof ossPjax.sysOpt.version == "function" ? ossPjax.sysOpt.version() : ossPjax.sysOpt.version;
 
             //  todo  可以添加页面级缓存，并和当前版本号比较（非必要）
             if (!ajaxOpt.data) ajaxOpt.data = {}
@@ -217,7 +217,7 @@
                 ajaxOpt.data._pav = ver;
             }
             
-            abortXHR(osPjax.xhr);
+            abortXHR(ossPjax.xhr);
             opt.method.beforeRemote(ajaxOpt); //  加载之前触发事件
 
             //  处理ajax的beforeSend
@@ -231,7 +231,7 @@
                 }
             }
             var defer = $.Deferred();
-            osPjax.xhr = $.ajax(ajaxOpt).done(function(resData, textStatus, hr) {
+            ossPjax.xhr = $.ajax(ajaxOpt).done(function(resData, textStatus, hr) {
                 var filterRes = !opt.method.resultFilter ? resData : opt.method.resultFilter(resData, textStatus, hr);
                 if (!filterRes) {
                     defer.reject(resData, textStatus, hr);
@@ -285,17 +285,17 @@
          * @returns {} 
          */
         sysVer: function (opt) {
-            var osPjax =this;
-            
+            var ossPjax =this;
+
             if (!!opt) {
-                $.extend(osPjax.sysOpt, opt);
-                if (osPjax.sysOpt.checkVer && osPjax.sysVerCheckCount === 0) {                 
+                $.extend(ossPjax.sysOpt, opt);
+                if (ossPjax.sysOpt.checkVer && ossPjax.sysVerCheckCount === 0) {                 
                     // 初始化五分钟后开始首次检测  0- 首次传入时间间隔
-                    setTimeout(function() { checkServerVersion(osPjax, 0); }, 5 * 60 * 1000);               
+                    setTimeout(function() { checkServerVersion(ossPjax, 0); }, 5 * 60 * 1000);               
                 }
                 return true;
             }
-            return osPjax.SysOpt;
+            return ossPjax.SysOpt;
         },
         sysVerCheckCount: 0
 };
@@ -303,19 +303,19 @@
   
     /**
      *  检查服务器版本
-     * @param {any} osPjax
+     * @param {any} ossPjax
      * @param {any} mins
      */
-    function checkServerVersion(osPjax, mins) {
-        var opt = osPjax.sysOpt;
+    function checkServerVersion(ossPjax, mins) {
+        var opt = ossPjax.sysOpt;
 
         // 如果第一次加载，使用设置默认时间间隔
         mins = mins === 0 ? opt.intervalMins : mins;
-        osPjax.sysVerCheckCount += 1;
+        ossPjax.sysVerCheckCount += 1;
 
         $.ajax({ url: opt.serverUrl, type: opt.type })
             .done(function (v) {
-                var curVer = typeof osPjax.sysOpt.version == "function" ? osPjax.sysOpt.version() : osPjax.sysOpt.version;
+                var curVer = typeof ossPjax.sysOpt.version == "function" ? ossPjax.sysOpt.version() : ossPjax.sysOpt.version;
                 if (v !== curVer) {
                     window.location.href = formatUrlWithVersion(location.href, v);
                 }
@@ -323,8 +323,8 @@
             })
             .fail(function() {
                 if (mins > 8) mins -= 1;
-            }).complete(function () {
-                setTimeout(function() { checkServerVersion(osPjax, mins); }, mins * 60 * 1000);
+            }).always(function () {
+                setTimeout(function() { checkServerVersion(ossPjax, mins); }, mins * 60 * 1000);
             });
     }
 
@@ -380,7 +380,7 @@
             }
             state._deepLevel = getDeepLevel(instance.opt.nameSpc);
         }
-        return window.ospjaxCurPageState = instance.pageState = state;
+        return window.osspjaxCurPageState = instance.pageState = state;
     }
 
     /**
@@ -466,7 +466,7 @@
             return false;
 
         if (link.tagName.toUpperCase() !== "A")
-            throw "ospjax click event requires an anchor element";
+            throw "osspjax click event requires an anchor element";
 
         // 如果已经被阻止，则取消
         if (event.isDefaultPrevented())
@@ -547,7 +547,7 @@
                     if (!pageState) return;
 
                     var handlerSpc = pageState.nameSpc;
-                    var curState = window.ospjaxCurPageState;
+                    var curState = window.osspjaxCurPageState;
                     var direction = curState.id < pageState.id ? 1 : 2; //  1 . 前进   2. 后退
 
                     if (pageState.nameSpc !== curState.nameSpc
@@ -584,7 +584,7 @@
                 options = $.extend(true, {}, defaultOption, options);
                 setDeepLevel(options.nameSpc);//  在初始化之前执行
 
-                $this.data(dataName, (cacheData = new OSPjax(this, options)));
+                $this.data(dataName, (cacheData = new OssPjax(this, options)));
                 addPopHandler(options.nameSpc, cacheData);
                 return;
             }
@@ -592,7 +592,7 @@
             if (typeof option == "string" && typeof cacheData[option] == "function") {
                 internalReturn = cacheData[option].apply(cacheData, args);
             } else {
-                throw "请检查当前元素下是否已经绑定ospjax控件，或者当前调用方法是否不存在！";
+                throw "请检查当前元素下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
             }
         });
 
@@ -604,22 +604,22 @@
 
 
     function setDeepLevel(nameSpc) {
-        var curLevel = window.ospjaxCurDeepLevel;
+        var curLevel = window.osspjaxCurDeepLevel;
 
         if (!curLevel) {
-            window.ospjaxCurDeepLevel = curLevel = 0;
-            window.ospjaxNameSpcDeep = [];
+            window.osspjaxCurDeepLevel = curLevel = 0;
+            window.osspjaxNameSpcDeep = [];
         }
 
         // 不管存不存在直接重新设置值
         var level = curLevel + 1;
-        window.ospjaxCurDeepLevel = window.ospjaxNameSpcDeep[nameSpc] = level;
+        window.osspjaxCurDeepLevel = window.osspjaxNameSpcDeep[nameSpc] = level;
         
         return level;
     }
 
     function getDeepLevel(nameSpc) {
-        return window.ospjaxNameSpcDeep[nameSpc];
+        return window.osspjaxNameSpcDeep[nameSpc];
     }
 
     var isSupport = window.history &&
@@ -627,12 +627,12 @@
         window.history.replaceState;
 
     if (isSupport) {
-        var old = $.fn.ospjax;
-        $.fn.ospjax = fnPjax;
-        $.fn.ospjax.constructor = OSPjax;
+        var old = $.fn.osspjax;
+        $.fn.osspjax = fnPjax;
+        $.fn.osspjax.constructor = OssPjax;
         // 冲突控制权的回归处理
-        $.fn.ospjax.noConflict = function() {
-            $.fn.ospjax = old;
+        $.fn.osspjax.noConflict = function() {
+            $.fn.osspjax = old;
             return this;
         };
     }
