@@ -81,19 +81,19 @@
             $("head").find("[pjax-temp-tag='" + opt.nameSpc + "'").remove();
 
             var pageScripts = $('script');
-            con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, "src", opt.nameSpc);
+            con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, opt.nameSpc,"src");
 
             var pageCssLinks = $("head").find("link[rel='stylesheet'],style");
-            con.css = this._filterAndSetAttr(con.css, pageCssLinks, "href", opt.nameSpc);
+            con.css = this._filterAndSetAttr(con.css, pageCssLinks, opt.nameSpc, "href");
         },
-        _filterAndSetAttr: function(newList, pageList, attrName, nameSpc) {
+        _filterAndSetAttr: function(newList, pageList, nameSpc, attrName) {
             var resList = newList.filter(function() {
 
-                var nId = this[attrName] || this.id;
+                var nId = this[attrName] || this.id || this.innerText;
                 for (var i = 0; i < pageList.length; i++) {
 
                     var pCssItem = pageList[i];
-                    var pCssId = pCssItem[attrName] || pCssItem.id;
+                    var pCssId = pCssItem[attrName] || pCssItem.id || pCssItem.innerText;
 
                     if (nId === pCssId) {
                         return false;
