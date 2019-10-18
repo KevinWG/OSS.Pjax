@@ -105,28 +105,26 @@
             return resList;
         },
     
-        //addNewCss: function (con, opt) {
-        //    con.css.each(function () {
-        //        document.head.appendChild(this);
-        //    });
-        //},
-        addNewScript: function(con, opt) {
-            con.scripts.each(function() {
+        addNewCss: function (con) {
+            $("head").append(con.css);
+        },
+        addNewScript: function (con) {
+            $("head").append(con.scripts);
+            //con.scripts.each(function() {
+            //    var script = document.createElement('script');
+            //    var src = this.src;
+            //    if (src) {
+            //        script.src = src;
+            //    } else {
+            //        script.innerHTML = $(this).html();
+            //    }
+            //    script.id = this.id;
+            //    var type = this["type"];
+            //    if (type) script.type = type;
 
-                var script = document.createElement('script');
-                var src = this.src;
-                if (src) {
-                    script.src = src;
-                } else {
-                    script.innerHTML = $(this).html();
-                }
-                script.id = this.id;
-                var type = this["type"];
-                if (type) script.type = type;
-
-                script.setAttribute("pjax-temp-tag", $(this).attr("pjax-temp-tag"));
-                document.head.appendChild(script);
-            });
+            //    script.setAttribute("pjax-temp-tag", $(this).attr("pjax-temp-tag"));
+            //    document.head.appendChild(script);
+            //});
         },
 
         /**
@@ -284,9 +282,9 @@
             opt.methods.removeOld($oldContainer);    
             pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
             
-            $wraper.append(con.css);
+            pjaxHtmlHelper.addNewCss(con);
             $wraper.append(con.content);
-            pjaxHtmlHelper.addNewScript(con, opt);
+            pjaxHtmlHelper.addNewScript(con);
 
             opt.methods.showNew(con.content, function() {
                 opt.methods.complete(ossPjax.pageState);
