@@ -221,7 +221,7 @@
             if (!req)
                 return;
 
-            this.opt.method.click(event);
+            this.opt.methods.click(event);
             if (event.isDefaultPrevented())
                 return;
 
@@ -264,7 +264,7 @@
                 ossPjax.replaceContent(con, animation);
 
             }).fail(function(errMsg, textStatus, hr) {
-                ossPjax.opt.method.remoteError(errMsg, textStatus, hr);
+                ossPjax.opt.methods.remoteError(errMsg, textStatus, hr);
             });
         },
 
@@ -281,15 +281,15 @@
                 } catch (e) {}
             }
 
-            opt.method.removeOld($oldContainer);    
+            opt.methods.removeOld($oldContainer);    
             pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
             
             $wraper.append(con.css);
             $wraper.append(con.content);
             pjaxHtmlHelper.addNewScript(con, opt);
 
-            opt.method.showNew(con.content, function() {
-                opt.method.complete(ossPjax.pageState);
+            opt.methods.showNew(con.content, function() {
+                opt.methods.complete(ossPjax.pageState);
             });
         },
         /**
@@ -315,7 +315,7 @@
             }
 
             abortXHR(ossPjax.xhr);
-            opt.method.beforeRemote(ajaxOpt); //  加载之前触发事件
+            opt.methods.beforeRemote(ajaxOpt); //  加载之前触发事件
 
             //  处理ajax的beforeSend
             var oldBeforEvent = ajaxOpt.beforeSend;
@@ -329,7 +329,7 @@
             }
             var defer = $.Deferred();
             ossPjax.xhr = $.ajax(ajaxOpt).done(function(resData, textStatus, hr) {
-                var filterRes = !opt.method.resultFilter ? resData : opt.method.resultFilter(resData, textStatus, hr);
+                var filterRes = !opt.methods.resultFilter ? resData : opt.methods.resultFilter(resData, textStatus, hr);
                 if (!filterRes) {
                     defer.reject(resData, textStatus, hr);
                 } else {
