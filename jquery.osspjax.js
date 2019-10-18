@@ -46,44 +46,95 @@
             remoteError: function(errMsg, textState, xhr) {},
 
             /**
-             * 内容格式化前事件，系统格式化后将分离css，js，version等属性，可以在这里做更细化的处理
-             * @param {} newContainer  初始新容器
-             * @param {} formatContent   初始内容对象，
-             * @returns {} 
+             * 移除旧容器，可添加动画
+             * @param {any} $oldContainer
              */
-            beforeFormat: function (newContainer, formatContent) { },
-
-            /**
-             *   css加载前事件，此时内容都没有加载
-             * @param {} newContent
-             * @returns {} 
-             */
-            cssLoading: function(newContent) {},
-            /**
-              *   script加载前事件，此时css和html已经加载
-              * @param {} newContent
-              * @returns {} 
-              */
-            scriptLoading: function(newContent) {},
-            /**
-             * 自定义动画处理
-             * @param {} $newContainer 
-             * @param {} $oldContainer 
-             * @param {} endFunc 
-             */
-            trans: function($newContainer, $oldContainer, endFunc) {
-                $oldContainer.hide("slow");
-                $newContainer.show("slow");
-                endFunc();
+            removeOld: function($oldContainer) {
+                $oldContainer.remove();
             },
 
+            /**
+             * 显示新容器
+             * @param {any} $newContainer
+             */
+            showNew: function($newContainer,afterShow) {
+                $newContainer.show();
+                afterShow();
+            },
+            
             /**
              *  结束事件
              */
             complete: function(newState) {}
         }
     };
-    
+
+    var pjaxHtmlHelper = {
+        /**
+         *  去掉页面中已经重复的js和css文件
+         * @param {any} con
+         */
+        filterRepeatCssScripts: function (con, opt) {
+
+            var pageScripts = $('script');
+            con.scripts = con.scripts.filter(function () {
+
+                var nId = this.src || this.id;
+
+                for (var i = 0; i < pageScripts.length; i++) {
+                    var pScItem = pageScripts[i];
+                    var pScId = pScItem.src || pScItem.id;
+                    if (nId == pScId) {
+                        return false;
+                    }
+                }
+
+                this.attr("pjax-temp-tag", opt.nameSpc);
+                return true;
+            });
+
+            var pageCssLinks = $("head").find("link[rel='stylesheet'],style");
+
+            con.css = con.css.filter(function () {
+                var nId = this.href || this.id;
+                for (var i = 0; i < pageCssLinks.length; i++) {
+                    var pCssItem = pageCssLinks[i];
+                    var pCssId = pCssItem.href || pCssItem.id;
+
+                    if (nId == pCssId) {
+                        return false;
+                    }
+                }
+                this.attr("pjax-temp-tag", opt.nameSpc);
+                return true;
+            });
+        },
+        clearOldCssScript: function() {
+            $("head").find("[pjax-temp-tag='" + opt.nameSpc + "'").remove();
+        },
+        addNewCss: function (con, opt) {
+            con.css.each(function () {
+                var c = this[0];
+                document.head.appendChild(c);
+            });
+        },
+        addNewScript: function (con, opt) {
+            con.scripts.each(function () {
+                var s = this[0];
+                document.head.appendChild(s);
+            });
+        },
+        /**
+         *  查找头部meta的版本信息
+         */
+        findVersion:function () {
+            return $("meta").filter(function () {
+                var name = $(this).attr("http-equiv");
+                return name && name.toLowerCase() === "app-version";
+            }).attr("content");
+        }
+    }
+
     var OssPjax = function(element, opt) {
         var self = this;
         self.opt = opt;
@@ -102,7 +153,7 @@
     // 实例属性： state 是当前页面信息，   xhr 远程请求实体信息
     // 原型属性： haveSysVerCheck  是否已经开启服务器版本检查
     OssPjax.prototype = {
-        click: function(event) {            
+        click: function(event) {
             var req = formatLinkEvent(event);
             if (!req)
                 return;
@@ -124,19 +175,21 @@
          */
         goTo: function(req) {
             var ossPjax = this;
+
             //  处理请求地址参数
             setReqUrl(ossPjax.opt, req);
 
-            ossPjax.getContent(req).then(function(con) {
+            ossPjax.getContent(req).done(function(con) {
                 checkContentVsersion(ossPjax.sysOpt, con);
                 var opt = ossPjax.opt;
+
                 if (!req.popState) {
                     if (opt.push || opt.replace) {
                         var newState = setPageState(ossPjax, con);
                         if (opt.push)
                             window.history.pushState(newState, newState.title, newState.url);
                         else if (opt.replace)
-                            window.history.replaceState(newState, newState.title, newState.url);  
+                            window.history.replaceState(newState, newState.title, newState.url);
                     }
                 } else {
                     setPageState(ossPjax, null, req.popState);
@@ -158,42 +211,29 @@
             var opt = ossPjax.opt;
 
             var $wraper = $(opt.wraper);
-            //  防止翻页过快导致的页面同时出现两个相同的模块
-            $wraper.find("." + opt.fragment + "[oss-pjax-abandon]").remove();
+            ////  防止翻页过快导致的页面同时出现两个相同的模块
+            //$wraper.find("." + opt.fragment + "[oss-pjax-abandon]").remove();
 
             var $oldContainer = $wraper.find("." + opt.fragment);
             if ($.contains($oldContainer, document.activeElement)) {
                 try {
                     document.activeElement.blur();
-                } catch (e) {}
+                } catch (e) {
+                }
             }
 
-            if (animation) {
-                $oldContainer.attr("oss-pjax-abandon", "oss-pjax-abandon");
-            } else {
-                $oldContainer.remove();
+            if (opt.method.removeOld) {
+                opt.method.removeOld($oldContainer);
             }
+            pjaxHtmlHelper.clearOldCssScript();
 
-            ossPjax.opt.method.cssLoading(con);
-            con.content.prepend(con.css);
+            pjaxHtmlHelper.addNewCss(con, opt);
             con.content.appendTo($wraper);
+            pjaxHtmlHelper.addNewScript(con, opt);
 
-            ossPjax.opt.method.scriptLoading(con);
-            con.content.append(con.scripts);
-
-            if (animation) {
-                opt.method.trans(con.content,
-                    $oldContainer,
-                    function() {
-                        $oldContainer.remove();
-                        con.content.show(); //  以确保没有问题
-                        opt.method.complete(ossPjax.pageState);
-                    });
-            } else {
-                con.content.show(); //  以确保没有问题
+            opt.method.showNew(con.content, function() {
                 opt.method.complete(ossPjax.pageState);
-            }
-
+            });
         },
         /**
          *  获取内容
@@ -216,7 +256,7 @@
             } else {
                 ajaxOpt.data._pav = ver;
             }
-            
+
             abortXHR(ossPjax.xhr);
             opt.method.beforeRemote(ajaxOpt); //  加载之前触发事件
 
@@ -246,18 +286,18 @@
             return defer.promise();
         },
 
-        onPopstate: function (state, direction) {
+        onPopstate: function(state, direction) {
             if (state && state.url) {
-                this.goTo({ url: state.url, title: state.title, popDirection: direction, popState: state});
+                this.goTo({ url: state.url, title: state.title, popDirection: direction, popState: state });
             };
         },
-    
+
         /**
         * 获取或者设置当前的页面State
         * @param {} state 
         * @returns {} 
         */
-        state: function (action,state) {
+        state: function(action, state) {
             if (state && state.url) {
                 if (action === "pushState") {
                     window.history.pushState(state, state.title, state.url);
@@ -272,11 +312,11 @@
         sysOpt: {
             //如果服务端设置了页面max-age过大
             //可以主动设置发起版本查看，以便请求时自动附带新版本号
-            checkVer:false,
-            serverUrl:"",
-            version: findVersion,
+            checkVer: false,
+            serverUrl: "",
+            version: pjaxHtmlHelper.findVersion,
             type: "GET",
-            intervalMins: 10   
+            intervalMins: 10
         },
 
         /**
@@ -284,21 +324,21 @@
          * @param {} opt 
          * @returns {} 
          */
-        sysVer: function (opt) {
-            var ossPjax =this;
+        sysVer: function(opt) {
+            var ossPjax = this;
 
             if (!!opt) {
                 $.extend(ossPjax.sysOpt, opt);
-                if (ossPjax.sysOpt.checkVer && ossPjax.sysVerCheckCount === 0) {                 
+                if (ossPjax.sysOpt.checkVer && ossPjax.sysVerCheckCount === 0) {
                     // 初始化五分钟后开始首次检测  0- 首次传入时间间隔
-                    setTimeout(function() { checkServerVersion(ossPjax, 0); }, 5 * 60 * 1000);               
+                    setTimeout(function() { checkServerVersion(ossPjax, 0); }, 5 * 60 * 1000);
                 }
                 return true;
             }
             return ossPjax.SysOpt;
         },
         sysVerCheckCount: 0
-};
+    };
 
   
     /**
@@ -403,59 +443,6 @@
     }
 
     /**
-     *   格式化内容实体
-     * @param {any} html
-     * @param {any} opt
-     * @param {any} req
-     * @param {any} xhr
-     */
-    function formatContent(html, opt, req, xhr) {
-        var con = {};
-        var $html = null;
-        con.origin = html;
-        con.isFull = /<html/i.test(html);        
-        
-        if (con.isFull) {
-            var conReg=html.match(/<body[^>]*>([\s\S.]*)<\/body>/i);
-            if(conReg&&conReg.length>=2 ){
-                $html= $(conReg[1]);
-                var $container= $html.find("."+opt.fragment).first()
-                if ($container.length>0) {                
-                    $html = $container;
-                }
-            }
-            if(!$html){
-                $html = $("<div></div>");
-            }    
-            var titleReg=html.match(/<title[^>]*>([\s\S.]*)<\/title>/i);
-            if(titleReg&&titleReg.length>0 ){
-                $html.append(($(titleReg[0])));
-            }   
-        }
-        else{
-            $html = $(html);
-        }
-    
-        if (!$html.hasClass(opt.fragment))
-            $html = $("<div class='"+opt.fragment+"' style='display:none'></div>").append($html);
-        
-        opt.method.beforeFormat($html, con);
-
-        con.title = $html.find("title").last().remove().text();
-        con.scripts = $html.find("script").remove();
-        con.css = $html.find("link[rel='stylesheet'],style").remove();
-        con.content = $html;
-
-        if (!con.title) 
-            con.title = $html.attr("title") || $html.data("title") || req.title;
-        
-        con.version = xhr.getResponseHeader("X-PJAX-Ver");
-        con.url = req.url;
-        
-        return con;
-    }
-
-    /**
     *  验证链接
     * @param {any} event   链接元素
      * @return  false-停止Pjax，执行原生。   {} Pjax执行需要的地址信息
@@ -519,15 +506,56 @@
             req.remote_url = req.url;
     }
 
+
+
     /**
-     *  查找头部meta的版本信息
+     *   格式化内容实体
+     * @param {any} html
+     * @param {any} opt
+     * @param {any} req
+     * @param {any} xhr
      */
-    function findVersion() {
-        return $("meta").filter(function() {
-            var name = $(this).attr("http-equiv");
-            return name && name.toLowerCase() === "app-version";
-        }).attr("content");
+    function formatContent(html, opt, req, xhr) {
+
+        var $html = $(html), $content = null;
+        var con = { origin: html, isFull: /<html/i.test(html) };
+
+        if (con.isFull) {
+            $content = $html.find("." + opt.fragment).first();
+            if (!$content) {
+                $content = $("<div class='" + opt.fragment + "' style='display:none'></div>");
+                var cHtml = $html.find("body").html() || $html.html();
+                if (!!cHtml)
+                    $content.append($(cHtml));
+                else
+                    $content.append($("<div class='oss-pjax-nothing'></div>"));
+            }
+        } else {
+            $content = $html;
+            if (!$content.hasClass(opt.fragment))
+                $content = $html = $("<div class='" + opt.fragment + "' style='display:none'></div>").append($content);
+        }
+
+        con.content = $content;
+        con.title = $html.find("title").last().remove().text();
+        con.scripts = $html.find("script").remove();
+        con.css = $html.find("link[rel='stylesheet'],style").remove();
+        
+        pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
+   
+        if (!con.title)
+            con.title = $content.attr("title") || $content.data("title") || req.title;
+
+        con.version = xhr.getResponseHeader("X-PJAX-Ver");
+        con.url = req.url;
+
+        return con;
     }
+
+
+
+
+
 
     //  在pop时，如果方向为旧前进到新，需要按照旧实例处理。
     //  11122   (在第三页初始化新的实例)
@@ -628,6 +656,7 @@
 
     if (isSupport) {
         var old = $.fn.osspjax;
+
         $.fn.osspjax = fnPjax;
         $.fn.osspjax.constructor = OssPjax;
         // 冲突控制权的回归处理
