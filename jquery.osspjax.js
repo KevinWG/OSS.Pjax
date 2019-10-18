@@ -109,7 +109,7 @@
                 return true;
             });
         },
-        clearOldCssScript: function() {
+        clearOldCssScript: function(opt) {
             $("head").find("[pjax-temp-tag='" + opt.nameSpc + "'").remove();
         },
         addNewCss: function (con, opt) {
@@ -225,7 +225,7 @@
             if (opt.method.removeOld) {
                 opt.method.removeOld($oldContainer);
             }
-            pjaxHtmlHelper.clearOldCssScript();
+            pjaxHtmlHelper.clearOldCssScript(opt);
 
             pjaxHtmlHelper.addNewCss(con, opt);
             con.content.appendTo($wraper);
