@@ -82,6 +82,7 @@
                 var nId = this.src || this.id;
 
                 for (var i = 0; i < pageScripts.length; i++) {
+
                     var pScItem = pageScripts[i];
                     var pScId = pScItem.src || pScItem.id;
                     if (nId == pScId) {
@@ -123,6 +124,59 @@
                 var s = this[0];
                 document.head.appendChild(s);
             });
+        },
+        
+        /**
+         *   格式化内容实体
+         * @param {any} html
+         * @param {any} opt
+         * @param {any} req
+         * @param {any} xhr
+         */
+        formatContent:function (html, opt, req, xhr) {
+
+          
+            var con = { origin: html, isFull: /<html/i.test(html) };
+            var $html = null,$content=null;
+              
+            if (con.isFull) {
+
+                $html=$("<div></div>");
+
+                var head = html.match(/<head[^>]*>([\s\S.]*)<\/head>/i)
+                if(head){                   
+                    $html.append($(head[0]))
+                }
+                var $body = $(html.match(/<body[^>]*>([\s\S.]*)<\/body>/i)[0])
+                $html.append($body);
+
+                $content = $body.filter("." + opt.fragment).add($body.find("." + opt.fragment)).first();                
+                if (!$content.length) {
+
+                    $content = $("<div class='" + opt.fragment + "' style='display:none'></div>");                   
+                    $content.append($body);                
+                }
+               
+            } else {
+                $html=$(html);
+                if (!$html.hasClass(opt.fragment))
+                   $html = $("<div class='" + opt.fragment + "' style='display:none'></div>").append($html);
+
+                $content=$html;
+            }
+
+            con.content = $content;
+            con.title = $html.find("title").last().remove().text();
+            con.scripts = $html.find("script").remove();
+            con.css = $html.find("link[rel='stylesheet'],style").remove();
+            
+            if (!con.title)
+                con.title = $content.attr("title") || $content.data("title") || req.title;
+
+            con.version = xhr.getResponseHeader("X-PJAX-Ver");
+            con.url = req.url;
+
+            return con;
         },
         /**
          *  查找头部meta的版本信息
@@ -222,10 +276,10 @@
                 }
             }
 
-            if (opt.method.removeOld) {
-                opt.method.removeOld($oldContainer);
-            }
+            opt.method.removeOld($oldContainer);    
+
             pjaxHtmlHelper.clearOldCssScript(opt);
+            pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
 
             pjaxHtmlHelper.addNewCss(con, opt);
             con.content.appendTo($wraper);
@@ -276,7 +330,7 @@
                 if (!filterRes) {
                     defer.reject(resData, textStatus, hr);
                 } else {
-                    var con = formatContent(filterRes, opt, req, hr);
+                    var con = pjaxHtmlHelper.formatContent(filterRes, opt, req, hr);                    
                     defer.resolve(con);
                 }
             }).fail(function(hr, textStatus, errMsg) {
@@ -507,50 +561,6 @@
     }
 
 
-
-    /**
-     *   格式化内容实体
-     * @param {any} html
-     * @param {any} opt
-     * @param {any} req
-     * @param {any} xhr
-     */
-    function formatContent(html, opt, req, xhr) {
-
-        var $html = $(html), $content = null;
-        var con = { origin: html, isFull: /<html/i.test(html) };
-
-        if (con.isFull) {
-            $content = $html.find("." + opt.fragment).first();
-            if (!$content) {
-                $content = $("<div class='" + opt.fragment + "' style='display:none'></div>");
-                var cHtml = $html.find("body").html() || $html.html();
-                if (!!cHtml)
-                    $content.append($(cHtml));
-                else
-                    $content.append($("<div class='oss-pjax-nothing'></div>"));
-            }
-        } else {
-            $content = $html;
-            if (!$content.hasClass(opt.fragment))
-                $content = $html = $("<div class='" + opt.fragment + "' style='display:none'></div>").append($content);
-        }
-
-        con.content = $content;
-        con.title = $html.find("title").last().remove().text();
-        con.scripts = $html.find("script").remove();
-        con.css = $html.find("link[rel='stylesheet'],style").remove();
-        
-        pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
-   
-        if (!con.title)
-            con.title = $content.attr("title") || $content.data("title") || req.title;
-
-        con.version = xhr.getResponseHeader("X-PJAX-Ver");
-        con.url = req.url;
-
-        return con;
-    }
 
 
 
