@@ -74,58 +74,59 @@
          *  去掉页面中已经重复的js和css文件
          * @param {any} con
          */
-        filterRepeatCssScripts: function (con, opt) {
+        filterRepeatCssScripts: function(con, opt) {
 
             var pageScripts = $('script');
-            con.scripts = con.scripts.filter(function () {
-
-                var nId = this.src || this.id;
-
-                for (var i = 0; i < pageScripts.length; i++) {
-
-                    var pScItem = pageScripts[i];
-                    var pScId = pScItem.src || pScItem.id;
-                    if (nId == pScId) {
-                        return false;
-                    }
-                }
-
-                this.attr("pjax-temp-tag", opt.nameSpc);
-                return true;
-            });
+            con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, "src", opt.nameSpc);
 
             var pageCssLinks = $("head").find("link[rel='stylesheet'],style");
+            con.css = this._filterAndSetAttr(con.css, pageCssLinks, "href", opt.nameSpc);
+        },
+        _filterAndSetAttr: function(newList, pageList, attrName, nameSpc) {
+            var resList = newList.filter(function() {
 
-            con.css = con.css.filter(function () {
-                var nId = this.href || this.id;
-                for (var i = 0; i < pageCssLinks.length; i++) {
-                    var pCssItem = pageCssLinks[i];
-                    var pCssId = pCssItem.href || pCssItem.id;
+                var nId = this[attrName] || this.id;
+                for (var i = 0; i < pageList.length; i++) {
 
-                    if (nId == pCssId) {
+                    var pCssItem = pageList[i];
+                    var pCssId = pCssItem[attrName] || pCssItem.id;
+
+                    if (nId === pCssId) {
                         return false;
                     }
                 }
-                this.attr("pjax-temp-tag", opt.nameSpc);
                 return true;
             });
+            resList.attr("pjax-temp-tag", nameSpc);
+            return resList;
         },
         clearOldCssScript: function(opt) {
             $("head").find("[pjax-temp-tag='" + opt.nameSpc + "'").remove();
         },
-        addNewCss: function (con, opt) {
-            con.css.each(function () {
-                var c = this[0];
-                document.head.appendChild(c);
+        //addNewCss: function (con, opt) {
+        //    con.css.each(function () {
+        //        document.head.appendChild(this);
+        //    });
+        //},
+        addNewScript: function(con, opt) {
+            con.scripts.each(function() {
+
+                var script = document.createElement('script');
+                var src = this.src;
+                if (src) {
+                    script.src = src;
+                } else {
+                    script.innerHTML = $(this).html();
+                }
+                script.id = this.id;
+                var type = this["type"];
+                if (type) script.type = type;
+
+                script.setAttribute("pjax-temp-tag", $(this).attr("pjax-temp-tag"));
+                document.head.appendChild(script);
             });
         },
-        addNewScript: function (con, opt) {
-            con.scripts.each(function () {
-                var s = this[0];
-                document.head.appendChild(s);
-            });
-        },
-        
+
         /**
          *   格式化内容实体
          * @param {any} html
@@ -133,43 +134,43 @@
          * @param {any} req
          * @param {any} xhr
          */
-        formatContent:function (html, opt, req, xhr) {
+        formatContent: function(html, opt, req, xhr) {
 
-          
+
             var con = { origin: html, isFull: /<html/i.test(html) };
-            var $html = null,$content=null;
-              
+            var $html = null, $content = null;
+
             if (con.isFull) {
 
-                $html=$("<div></div>");
+                $html = $("<div></div>");
 
-                var head = html.match(/<head[^>]*>([\s\S.]*)<\/head>/i)
-                if(head){                   
-                    $html.append($(head[0]))
+                var head = html.match(/<head[^>]*>([\s\S.]*)<\/head>/i);
+                if (head) {
+                    $html.append($(this._parseHTML(head[0])));
                 }
-                var $body = $(html.match(/<body[^>]*>([\s\S.]*)<\/body>/i)[0])
+                var $body = $(this._parseHTML(html.match(/<body[^>]*>([\s\S.]*)<\/body>/i)[0]));
                 $html.append($body);
 
-                $content = $body.filter("." + opt.fragment).add($body.find("." + opt.fragment)).first();                
+                $content = $body.filter("." + opt.fragment).add($body.find("." + opt.fragment)).first();
                 if (!$content.length) {
 
-                    $content = $("<div class='" + opt.fragment + "' style='display:none'></div>");                   
-                    $content.append($body);                
+                    $content = $("<div class='" + opt.fragment + "' style='display:none'></div>");
+                    $content.append($body);
                 }
-               
-            } else {
-                $html=$(html);
-                if (!$html.hasClass(opt.fragment))
-                   $html = $("<div class='" + opt.fragment + "' style='display:none'></div>").append($html);
 
-                $content=$html;
+            } else {
+                $html = $(this._parseHTML(html));
+                if (!$html.hasClass(opt.fragment))
+                    $html = $("<div class='" + opt.fragment + "' style='display:none'></div>").append($html);
+
+                $content = $html;
             }
 
             con.content = $content;
             con.title = $html.find("title").last().remove().text();
             con.scripts = $html.find("script").remove();
             con.css = $html.find("link[rel='stylesheet'],style").remove();
-            
+
             if (!con.title)
                 con.title = $content.attr("title") || $content.data("title") || req.title;
 
@@ -178,16 +179,19 @@
 
             return con;
         },
+        _parseHTML: function(htmlString) {
+            return $.parseHTML(htmlString, document, true);
+        },
         /**
          *  查找头部meta的版本信息
          */
-        findVersion:function () {
-            return $("meta").filter(function () {
+        findVersion: function() {
+            return $("meta").filter(function() {
                 var name = $(this).attr("http-equiv");
                 return name && name.toLowerCase() === "app-version";
             }).attr("content");
         }
-    }
+    };
 
     var OssPjax = function(element, opt) {
         var self = this;
@@ -265,24 +269,21 @@
             var opt = ossPjax.opt;
 
             var $wraper = $(opt.wraper);
-            ////  防止翻页过快导致的页面同时出现两个相同的模块
-            //$wraper.find("." + opt.fragment + "[oss-pjax-abandon]").remove();
-
+            
             var $oldContainer = $wraper.find("." + opt.fragment);
             if ($.contains($oldContainer, document.activeElement)) {
                 try {
                     document.activeElement.blur();
-                } catch (e) {
-                }
+                } catch (e) {}
             }
 
             opt.method.removeOld($oldContainer);    
 
             pjaxHtmlHelper.clearOldCssScript(opt);
             pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
-
-            pjaxHtmlHelper.addNewCss(con, opt);
-            con.content.appendTo($wraper);
+            
+            $wraper.append(con.css);
+            $wraper.append(con.content);
             pjaxHtmlHelper.addNewScript(con, opt);
 
             opt.method.showNew(con.content, function() {
