@@ -17,37 +17,36 @@
         method: {
             /**
              *  点击事件，   可以通过 event.preventDefault()取消后续执行
-             * @param {} event 
+             * @param {any} event 触发事件对象
              */
             click: function(event) {},
 
             /**
              * 加载远程内容之前事件
-             * @param {} ajaxOpt  ajax请求相关参数，可以更改
+             * @param {any} ajaxOpt  ajax请求相关参数，可以更改
              */
             beforeRemote: function(ajaxOpt) {},
 
             /**
              * 过滤请求结果
-             * @param {} res  请求结果
-             * @param {} textState ajax 请求状态
-             * @param {} xhr  xmlhttprequest
-             * @returns 如果返回false 会触发 remoteError 事件。 或者返回处理后的html继续后续流程
+             * @param {any} res  请求结果
+             * @param {any} textState ajax 请求状态
+             * @param {any} xhr  xmlhttprequest
+             * @returns {any} 如果返回false 会触发 remoteError 事件。 或者返回处理后的html继续后续流程
              */
-            resultFilter: function(res, textState, xhr) { return res },
+            resultFilter: function(res, textState, xhr) { return res; },
 
             /**
              * 获取内容结束事件
-             * @param {} res  请求结果
-             * @param {} textState ajax 请求状态
-             * @param {} xhr  xmlhttprequest
-             * @returns  
+             * @param {any} errMsg  请求结果
+             * @param {any} textState ajax 请求状态
+             * @param {any} xhr  xmlhttprequest
              */
             remoteError: function(errMsg, textState, xhr) {},
 
             /**
              * 移除旧容器，可添加动画
-             * @param {any} $oldContainer
+             * @param {any} $oldContainer 旧容器
              */
             removeOld: function($oldContainer) {
                 $oldContainer.remove();
@@ -55,15 +54,17 @@
 
             /**
              * 显示新容器
-             * @param {any} $newContainer
+             * @param {any} $newContainer 新容器
+             * @param {any} afterShow showNew结束前必须执行的回调
              */
             showNew: function($newContainer,afterShow) {
-                $newContainer.show();
+                $newContainer.show(200);
                 afterShow();
             },
             
             /**
-             *  结束事件
+             * 结束事件
+             * @param {any} newState 新的页面状态
              */
             complete: function(newState) {}
         }
@@ -71,8 +72,9 @@
 
     var pjaxHtmlHelper = {
         /**
-         *  去掉页面中已经重复的js和css文件
-         * @param {any} con
+         *    *  去掉页面中已经重复的js和css文件   
+         * @param {any} con  内容对象
+         * @param {any} opt  实例选项
          */
         filterRepeatCssScripts: function (con, opt) {
             // 清除上个页面相关js，css 内容
@@ -128,11 +130,12 @@
         },
 
         /**
-         *   格式化内容实体
-         * @param {any} html
-         * @param {any} opt
-         * @param {any} req
-         * @param {any} xhr
+         * 格式化内容
+         * @param {any} html 原始html
+         * @param {any} opt pjax实例选项
+         * @param {any} req 请求信息
+         * @param {any} xhr 请求xmlhttprequest
+         * @returns {any} 格式化后的内容对象
          */
         formatContent: function(html, opt, req, xhr) {
 
@@ -185,6 +188,7 @@
         },
         /**
          *  查找头部meta的版本信息
+         * @returns {any} 头信息中的版本号
          */
         findVersion: function() {
             return $("meta").filter(function() {
@@ -228,9 +232,8 @@
             window.location.href = url;
         },
         /**
-         * 
-         * @param {} req { url:"", title: "", popDirection: 0, popState: null, no_animation:false}
-         * @returns {} 
+         * 根据请求转移到指定页面
+         * @param {any} req { url:"", title: "", popDirection: 0, popState: null, no_animation:false}
          */
         goTo: function(req) {
             var ossPjax = this;
@@ -291,8 +294,8 @@
         },
         /**
          *  获取内容
-         * @param {} req 
-         * @returns {}  promise对象
+         * @param {any} req 请求信息
+         * @returns {any}  promise对象
          */
         getContent: function(req) {
             var ossPjax = this;
@@ -347,10 +350,11 @@
         },
 
         /**
-        * 获取或者设置当前的页面State
-        * @param {} state 
-        * @returns {} 
-        */
+         * 获取或者设置当前的页面State
+         * @param {any} action 动作
+         * @param {any} state 页面对像
+         * @returns {any} 如果指定动作和对象不为空，返回操作成功与否。否则返回当前页面对象
+         */
         state: function(action, state) {
             if (state && state.url) {
                 if (action === "pushState") {
@@ -560,16 +564,6 @@
             req.remote_url = req.url;
     }
 
-
-
-
-
-
-
-
-    //  在pop时，如果方向为旧前进到新，需要按照旧实例处理。
-    //  11122   (在第三页初始化新的实例)
-    //  11222
     function addPopHandler(nameSpc, handler) {
 
         if (!this.popHandlers)
