@@ -19,17 +19,13 @@
          ossPjax.instance = $(document).osspjax({
              wraper: "#oss-page-wraper",
              nameSpc: "oss-pjax",
-             method: ossPjax.methods
+             methods: ossPjax.methods
          });
 
          // 定义全局goTo方法
          window.goTo = function(url, title) {
              ossPjax.instance.osspjax("goTo", { url: url, title: title });
          };
-         if (!isDev) { //  自动获取版本
-             OsApi.isDebug = false;
-            // ossPjax.instance.osspjax("sysVer", { checkVer: true, serverUrl: "/home/opv" });
-         }
     }
  };
  OssPjax.start(1);

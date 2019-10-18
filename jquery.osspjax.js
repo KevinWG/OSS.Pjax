@@ -14,7 +14,7 @@
             type: "GET",
             dataType: "html"
         },
-        method: {
+        methods: {
             /**
              *  点击事件，   可以通过 event.preventDefault()取消后续执行
              * @param {any} event 触发事件对象
