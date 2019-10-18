@@ -1,13 +1,5 @@
  var OssPjax = {
      instance: null,
-    //  changeState: function(action, url, title) {
-    //      var state = this.instance.osspjax("state");
-    //      if (url)
-    //          state.url = url;
-    //      if (title)
-    //          state.title = title;
-    //      this.instance.osspjax("state", action, state);
-    //  },
     methods:
     {
         remoteError: function(eMsg, textState, xhr) {

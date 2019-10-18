@@ -74,7 +74,9 @@
          *  去掉页面中已经重复的js和css文件
          * @param {any} con
          */
-        filterRepeatCssScripts: function(con, opt) {
+        filterRepeatCssScripts: function (con, opt) {
+            // 清除上个页面相关js，css 内容
+            $("head").find("[pjax-temp-tag='" + opt.nameSpc + "'").remove();
 
             var pageScripts = $('script');
             con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, "src", opt.nameSpc);
@@ -100,9 +102,7 @@
             resList.attr("pjax-temp-tag", nameSpc);
             return resList;
         },
-        clearOldCssScript: function(opt) {
-            $("head").find("[pjax-temp-tag='" + opt.nameSpc + "'").remove();
-        },
+    
         //addNewCss: function (con, opt) {
         //    con.css.each(function () {
         //        document.head.appendChild(this);
@@ -160,10 +160,11 @@
 
             } else {
                 $html = $(this._parseHTML(html));
-                if (!$html.hasClass(opt.fragment))
+                $content = $html.filter("." + opt.fragment).add($html.find("." + opt.fragment)).first();
+                if (!$content.length) {
                     $html = $("<div class='" + opt.fragment + "' style='display:none'></div>").append($html);
-
-                $content = $html;
+                    $content = $html;
+                }
             }
 
             con.content = $content;
@@ -278,8 +279,6 @@
             }
 
             opt.method.removeOld($oldContainer);    
-
-            pjaxHtmlHelper.clearOldCssScript(opt);
             pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
             
             $wraper.append(con.css);
