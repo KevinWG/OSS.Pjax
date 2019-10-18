@@ -622,7 +622,7 @@
             if (typeof option == "string" && typeof cacheData[option] == "function") {
                 internalReturn = cacheData[option].apply(cacheData, args);
             } else {
-                throw "请检查当前元素下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
+                throw "请检查当前元素(" + $this.id +")下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
             }
         });
 
