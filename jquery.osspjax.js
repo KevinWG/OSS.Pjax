@@ -49,7 +49,7 @@
              * @param {any} $oldContainer 旧容器
              */
             removeOld: function($oldContainer) {
-                $oldContainer.hide("fast").remove();
+                $oldContainer.remove();
             },
 
             /**
