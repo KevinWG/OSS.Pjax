@@ -82,9 +82,6 @@
 
             var pageScripts = $('script');
             con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, opt.nameSpc,"src");
-
-            var pageCssLinks = $("head").find("link[rel='stylesheet'],style");
-            con.css = this._filterAndSetAttr(con.css, pageCssLinks, opt.nameSpc, "href");
         },
         _filterAndSetAttr: function(newList, pageList, nameSpc, attrName) {
             var resList = newList.filter(function() {
@@ -104,15 +101,13 @@
             resList.attr("pjax-temp-tag", nameSpc);
             return resList;
         },
-        addNewCss: function (con) {
-            $("head").append(con.css);
-        },
         addNewScript: function (con) {
             con.scripts.each(function () {
                 var script = document.createElement("script");
 
                 if (this.id) script.id = this.id;
                 if (this.type) script.type = this.type;
+                if (this.class) script.class = this.class;
 
                 var src = this.src;
                 if (src) {
@@ -122,7 +117,7 @@
                 }
 
                 script.setAttribute("pjax-temp-tag", $(this).attr("pjax-temp-tag"));
-                document.head.appendChild(script);
+                document.body.appendChild(script);
             });
         },
 
@@ -170,8 +165,7 @@
             con.content = $content;
             con.title = $html.find("title").last().remove().text();
             con.scripts = $html.find("script").remove();
-            con.css = $html.find("link[rel='stylesheet'],style").remove();
-
+            
             if (!con.title)
                 con.title = $content.attr("title") || $content.data("title") || req.title;
 
@@ -281,7 +275,6 @@
             opt.methods.removeOld($oldContainer);    
             pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
             
-            pjaxHtmlHelper.addNewCss(con);
             $wraper.append(con.content);
             pjaxHtmlHelper.addNewScript(con);
 
