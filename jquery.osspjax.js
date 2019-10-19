@@ -49,7 +49,7 @@
              * @param {any} $oldContainer 旧容器
              */
             removeOld: function($oldContainer) {
-                $oldContainer.remove();
+                $oldContainer.hide("fast").remove();
             },
 
             /**
@@ -58,7 +58,7 @@
              * @param {any} afterShow showNew结束前必须执行的回调
              */
             showNew: function($newContainer,afterShow) {
-                $newContainer.show(200);
+                $newContainer.show("slow");
                 afterShow();
             },
             
@@ -155,7 +155,7 @@
                 $content = $body.filter("." + opt.fragment).add($body.find("." + opt.fragment)).first();
                 if (!$content.length) {
 
-                    $content = $("<div class='" + opt.fragment + "' style='display:none'></div>");
+                    $content = $("<div class='" + opt.fragment + "'></div>");
                     $content.append($body);
                 }
 
@@ -163,11 +163,11 @@
                 $html = $(this._parseHTML(html));
                 $content = $html.filter("." + opt.fragment).add($html.find("." + opt.fragment)).first();
                 if (!$content.length) {
-                    $html = $("<div class='" + opt.fragment + "' style='display:none'></div>").append($html);
+                    $html = $("<div class='" + opt.fragment + "'></div>").append($html);
                     $content = $html;
                 }
             }
-
+            $content.hide();
             con.content = $content;
             con.title = $html.find("title").last().remove().text();
             con.scripts = $html.find("script").remove();
