@@ -104,27 +104,26 @@
             resList.attr("pjax-temp-tag", nameSpc);
             return resList;
         },
-    
         addNewCss: function (con) {
             $("head").append(con.css);
         },
         addNewScript: function (con) {
-            $("head").append(con.scripts);
-            //con.scripts.each(function() {
-            //    var script = document.createElement('script');
-            //    var src = this.src;
-            //    if (src) {
-            //        script.src = src;
-            //    } else {
-            //        script.innerHTML = $(this).html();
-            //    }
-            //    script.id = this.id;
-            //    var type = this["type"];
-            //    if (type) script.type = type;
+            con.scripts.each(function () {
+                var script = document.createElement("script");
 
-            //    script.setAttribute("pjax-temp-tag", $(this).attr("pjax-temp-tag"));
-            //    document.head.appendChild(script);
-            //});
+                if (this.id) script.id = this.id;
+                if (this.type) script.type = this.type;
+
+                var src = this.src;
+                if (src) {
+                    script.src = src;
+                } else {
+                    script.innerHTML = $(this).html();
+                }
+
+                script.setAttribute("pjax-temp-tag", $(this).attr("pjax-temp-tag"));
+                document.head.appendChild(script);
+            });
         },
 
         /**
