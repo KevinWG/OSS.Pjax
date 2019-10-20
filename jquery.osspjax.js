@@ -76,9 +76,9 @@
          * @param {any} con  内容对象
          * @param {any} opt  实例选项
          */
-        filterRepeatCssScripts: function (con, opt) {
+        filterRepeatScripts: function (con, opt) {
             // 清除上个页面相关js，css 内容
-            $("head").find("[pjax-temp-tag='" + opt.nameSpc + "'").remove();
+            $("[oss-temp-scipts='" + opt.nameSpc + "']").remove();
 
             var pageScripts = $('script');
             con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, opt.nameSpc,"src");
@@ -98,7 +98,7 @@
                 }
                 return true;
             });
-            resList.attr("pjax-temp-tag", nameSpc);
+            resList.attr("oss-temp-scipts", nameSpc);
             return resList;
         },
         addNewScript: function (con) {
@@ -116,7 +116,7 @@
                     script.innerHTML = $(this).html();
                 }
 
-                script.setAttribute("pjax-temp-tag", $(this).attr("pjax-temp-tag"));
+                script.setAttribute("oss-temp-scipts", $(this).attr("oss-temp-scipts"));
                 document.body.appendChild(script);
             });
         },
@@ -273,7 +273,7 @@
             }
 
             opt.methods.removeOld($oldContainer);    
-            pjaxHtmlHelper.filterRepeatCssScripts(con,opt);
+            pjaxHtmlHelper.filterRepeatScripts(con,opt);
             
             $wraper.append(con.content);
             pjaxHtmlHelper.addNewScript(con);
