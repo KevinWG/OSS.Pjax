@@ -24,7 +24,8 @@
 
          // 定义全局goTo方法
          window.goTo = function(url, title) {
-             ossPjax.instance.osspjax("goTo", { url: url, title: title });
+            // ossPjax.instance.osspjax("goTo", { url: url, title: title });
+            $(document).osspjax("goTo", { url: url, title: title });
          };
     }
  };
