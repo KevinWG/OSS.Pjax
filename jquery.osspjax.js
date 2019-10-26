@@ -78,10 +78,13 @@
          */
         filterRepeatScripts: function (con, opt) {
             // 清除上个页面相关js，css 内容
-            $("[oss-temp-scipts='" + opt.nameSpc + "']").remove();
+            $("[oss-pjax-temp='" + opt.nameSpc + "']").remove();
 
             var pageScripts = $('script');
-            con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, opt.nameSpc,"src");
+            con.scripts = this._filterAndSetAttr(con.scripts, pageScripts, opt.nameSpc, "src");
+
+            var pageCssLinks = $("head").find("link[rel='stylesheet'],style");
+            con.css = this._filterAndSetAttr(con.css, pageCssLinks, opt.nameSpc, "href");
         },
         _filterAndSetAttr: function(newList, pageList, nameSpc, attrName) {
             var resList = newList.filter(function() {
@@ -98,8 +101,11 @@
                 }
                 return true;
             });
-            resList.attr("oss-temp-scipts", nameSpc);
+            resList.attr("oss-pjax-temp", nameSpc);
             return resList;
+        },
+        addNewCss: function (con) {
+            $("head").append(con.css);
         },
         addNewScript: function (con) {
             con.scripts.each(function () {
@@ -116,7 +122,7 @@
                     script.innerHTML = $(this).html();
                 }
 
-                script.setAttribute("oss-temp-scipts", $(this).attr("oss-temp-scipts"));
+                script.setAttribute("oss-pjax-temp", $(this).attr("oss-pjax-temp"));
                 document.body.appendChild(script);
             });
         },
@@ -165,7 +171,8 @@
             con.content = $content;
             con.title = $html.find("title").last().remove().text();
             con.scripts = $html.find("script").remove();
-            
+            con.css = $html.find("link[rel='stylesheet'],style").remove();
+
             if (!con.title)
                 con.title = $content.attr("title") || $content.data("title") || req.title;
 
@@ -269,8 +276,9 @@
             }
 
             opt.methods.removeOld($oldContainer);    
-            pjaxHtmlHelper.filterRepeatScripts(con,opt);
-            
+            pjaxHtmlHelper.filterRepeatScripts(con, opt);
+
+            pjaxHtmlHelper.addNewCss(con);
             $wraper.append(con.content);
             pjaxHtmlHelper.addNewScript(con);
 
