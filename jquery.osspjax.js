@@ -103,23 +103,24 @@
         },
 
         addNewScript: function (con) {
-            con.scripts.each(function () {
-                var script = document.createElement("script");
+            con.scripts.appendTo($("body"));
+            //con.scripts.each(function () {
+            //    var script = document.createElement("script");
 
-                if (this.id) script.id = this.id;
-                if (this.type) script.type = this.type;
-                if (this.class) script.class = this.class;
+            //    if (this.id) script.id = this.id;
+            //    if (this.type) script.type = this.type;
+            //    if (this.class) script.class = this.class;
 
-                var src = this.src;
-                if (src) {
-                    script.src = src;
-                } else {
-                    script.innerHTML = $(this).html();
-                }
+            //    var src = this.src;
+            //    if (src) {
+            //        script.src = src;
+            //    } else {
+            //        script.innerHTML = $(this).html();
+            //    }
 
-                script.setAttribute("oss-pjax-namespc", $(this).attr("oss-pjax-namespc"));
-                document.body.appendChild(script);
-            });
+            //    script.setAttribute("oss-pjax-namespc", $(this).attr("oss-pjax-namespc"));
+            //    document.body.appendChild(script);
+            //});
         },
         
         /**
