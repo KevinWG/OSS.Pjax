@@ -110,3 +110,11 @@
 同时为方便服务端进行动态调整和辨识，在请求的头信息中会附件如下两个属性：
 X-PJAX-Ver:当前客户端版本号
 X-PJAX: 当前实例命名空间
+
+
+#重复脚本控制
+针对某些js文件，可能只有少量页面依赖使用，希望能在使用相关页面时只加载渲染一次，可以在引用时使用oss-pjax-once属性，如下：
+
+```javascript
+	<script src="/lib/oss/oss.table.js" oss-pjax-once="true"></script>
+```

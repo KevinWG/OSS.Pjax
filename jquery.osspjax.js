@@ -7,7 +7,7 @@
         nameSpc: "oss-pjax",
         wraper: "#oss-wraper",
         fragment: "osspjax-container",
-        
+
         ajaxSetting: {
             timeout: 0,
             type: "GET",
@@ -19,13 +19,13 @@
              *  点击事件，   可以通过 event.preventDefault()取消后续执行
              * @param {any} event 触发事件对象
              */
-            click: function(event) {},
+            click: function (event) { },
 
             /**
              * 加载远程内容之前事件
              * @param {any} ajaxOpt  ajax请求相关参数，可以更改
              */
-            beforeRemote: function(ajaxOpt) {},
+            beforeRemote: function (ajaxOpt) { },
 
             /**
              * 过滤请求结果
@@ -34,21 +34,21 @@
              * @param {any} xhr  xmlhttprequest
              * @returns {any} 如果返回false 会触发 remoteError 事件。 或者返回处理后的html继续后续流程
              */
-            resultFilter: function(res, textState, xhr) { return res; },
+            resultFilter: function (res, textState, xhr) { return res; },
 
             /**
              * 获取内容结束事件
              * @param {any} errMsg  请求结果
              * @param {any} textState ajax 请求状态
              * @param {any} xhr  xmlhttprequest
-             */ 
-            remoteError: function(errMsg, textState, xhr) {},
+             */
+            remoteError: function (errMsg, textState, xhr) { },
 
             /**
              * 移除旧容器，可添加动画
              * @param {any} $oldContainer 旧容器
              */
-            removeOld: function($oldContainer) {
+            removeOld: function ($oldContainer) {
                 $oldContainer.remove();
             },
 
@@ -57,16 +57,16 @@
              * @param {any} $newContainer 新容器
              * @param {any} afterShow showNew结束前必须执行的回调
              */
-            showNew: function($newContainer,afterShow) {
+            showNew: function ($newContainer, afterShow) {
                 $newContainer.show("slow");
                 afterShow();
             },
-            
+
             /**
              * 结束事件
              * @param {any} newState 新的页面状态记录
              */
-            complete: function(newState) {}
+            complete: function (newState) { }
         }
     };
 
@@ -81,24 +81,31 @@
             $("script[oss-pjax-namespc='" + opt.nameSpc + "']").remove();
 
             var pageScripts = $('script');
-            con.scripts.each(function () {
-
+            con.scripts = con.scripts.filter(function () {
                 var $nConItem = $(this);
                 var nId = this["src"] || this.id || this.innerText;
-               
-                for (var i = 0; i < pageScripts.length; i++) {
-                    var pageItem = pageScripts[i];
-                    var pageId = pageItem["src"] || pageItem.id || pageItem.innerText;
-                    if (nId === pageId) {
-                        console.info("请求页面地址:" + con.url + " 包含了已经存在的" + pageId+" js文件/代码,将会重新加载！")
-                        $(pageItem).remove();
-                        break;
-                    }
-                }
 
                 if (!$nConItem.attr("oss-pjax-namespc")) {
                     $nConItem.attr("oss-pjax-namespc", opt.nameSpc);
                 }
+
+                for (var i = 0; i < pageScripts.length; i++) {
+                    var pageItem = pageScripts[i];
+                    var pageId = pageItem["src"] || pageItem.id || pageItem.innerText;
+                    if (nId === pageId) {
+
+                        if ($nConItem.attr("oss-pjax-once")) {
+                            $nConItem.remove();
+                            return false;
+                        }
+
+                        console.info("请求页面地址:" + con.url + " 包含了已经存在的" + pageId + " js文件/代码,将会重新加载！")
+                        $(pageItem).remove();
+                        return true;
+                    }
+                }
+                return true;
+
             });
         },
 
@@ -119,10 +126,11 @@
             //    }
 
             //    script.setAttribute("oss-pjax-namespc", $(this).attr("oss-pjax-namespc"));
+            //    script.setAttribute("oss-pjax-once", $(this).attr("oss-pjax-once"));
             //    document.body.appendChild(script);
             //});
         },
-        
+
         /**
          * 格式化内容
          * @param {any} html 原始html
@@ -131,7 +139,7 @@
          * @param {any} xhr 请求xmlhttprequest
          * @returns {any} 格式化后的内容对象
          */
-        formatContent: function(html, opt, req, xhr) {
+        formatContent: function (html, opt, req, xhr) {
 
             var con = { origin: html, isFull: /<html/i.test(html) };
             var $html = null, $content = null;
@@ -177,8 +185,8 @@
 
             return con;
         },
-       
-        _parseHTML: function(htmlString) {
+
+        _parseHTML: function (htmlString) {
             return $.parseHTML(htmlString, document, true);
         },
 
@@ -186,18 +194,18 @@
          *  查找头部meta的版本信息
          * @returns {any} 头信息中的版本号
          */
-        findVersion: function() {
-            return $("meta").filter(function() {
+        findVersion: function () {
+            return $("meta").filter(function () {
                 var name = $(this).attr("http-equiv");
                 return name && name.toLowerCase() === "app-version";
             }).attr("content");
         },
-        filterAndFind: function($ele, selecter) {
+        filterAndFind: function ($ele, selecter) {
             return $ele.filter(selecter).add($ele.find(selecter));
         }
     };
 
-    var OssPjax = function(element, opt) {
+    var OssPjax = function (element, opt) {
         var self = this;
         self.opt = opt;
 
@@ -208,14 +216,14 @@
 
         $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"),
             "a[oss-pjax-namespc='" + opt.nameSpc + "']",
-            function(event) {
+            function (event) {
                 self.click(event);
             });
     };
     // 实例属性： state 是当前页面信息，   xhr 远程请求实体信息
     // 原型属性： haveSysVerCheck  是否已经开启服务器版本检查
     OssPjax.prototype = {
-        click: function(event) {
+        click: function (event) {
             var req = formatLinkEvent(event);
             if (!req)
                 return;
@@ -231,13 +239,13 @@
          * 根据请求转移到指定页面
          * @param {any} req { url:"", title: "", popDirection: 0, popState: null, no_animation:false}
          */
-        goTo: function(req) {
+        goTo: function (req) {
             var ossPjax = this;
 
             //  处理请求地址参数
             setReqUrl(ossPjax.opt, req);
 
-            ossPjax.getContent(req).done(function(con) {
+            ossPjax.getContent(req).done(function (con) {
                 checkContentVsersion(ossPjax.sysOpt, con);
                 var opt = ossPjax.opt;
 
@@ -258,31 +266,31 @@
 
                 ossPjax.replaceContent(con);
 
-            }).fail(function(errMsg, textStatus, hr) {
+            }).fail(function (errMsg, textStatus, hr) {
                 ossPjax.opt.methods.remoteError(errMsg, textStatus, hr);
             });
         },
 
-        replaceContent: function(con) {
+        replaceContent: function (con) {
             var ossPjax = this;
             var opt = ossPjax.opt;
 
             var $wraper = $(opt.wraper);
-            
+
             var $oldContainer = $wraper.find("." + opt.fragment);
             if ($.contains($oldContainer, document.activeElement)) {
                 try {
                     document.activeElement.blur();
-                } catch (e) {}
+                } catch (e) { }
             }
 
-            opt.methods.removeOld($oldContainer);    
+            opt.methods.removeOld($oldContainer);
             pjaxHtmlHelper.filterRepeatScripts(con, opt);
 
             $wraper.append(con.content);
             pjaxHtmlHelper.addNewScript(con);
 
-            opt.methods.showNew(con.content, function() {
+            opt.methods.showNew(con.content, function () {
                 opt.methods.complete(ossPjax.pageState);
             });
         },
@@ -291,7 +299,7 @@
          * @param {any} req 请求信息
          * @returns {any}  promise对象
          */
-        getContent: function(req) {
+        getContent: function (req) {
             var ossPjax = this;
             var opt = ossPjax.opt;
 
@@ -313,7 +321,7 @@
 
             //  处理ajax的beforeSend
             var oldBeforEvent = ajaxOpt.beforeSend;
-            ajaxOpt.beforeSend = function(x) {
+            ajaxOpt.beforeSend = function (x) {
                 x.setRequestHeader("X-PJAX-Ver", ver);
                 x.setRequestHeader("X-PJAX", opt.nameSpc);
 
@@ -322,22 +330,22 @@
                 }
             }
             var defer = $.Deferred();
-            ossPjax.xhr = $.ajax(ajaxOpt).done(function(resData, textStatus, hr) {
+            ossPjax.xhr = $.ajax(ajaxOpt).done(function (resData, textStatus, hr) {
                 var filterRes = !opt.methods.resultFilter ? resData : opt.methods.resultFilter(resData, textStatus, hr);
                 if (!filterRes) {
                     defer.reject(resData, textStatus, hr);
                 } else {
-                    var con = pjaxHtmlHelper.formatContent(filterRes, opt, req, hr);                    
+                    var con = pjaxHtmlHelper.formatContent(filterRes, opt, req, hr);
                     defer.resolve(con);
                 }
-            }).fail(function(hr, textStatus, errMsg) {
+            }).fail(function (hr, textStatus, errMsg) {
                 defer.reject(errMsg, textStatus, hr);
             });
 
             return defer.promise();
         },
 
-        onPopstate: function(state, direction) {
+        onPopstate: function (state, direction) {
             if (state && state.url) {
                 this.goTo({ url: state.url, title: state.title, popDirection: direction, popState: state });
             };
@@ -349,7 +357,7 @@
          * @param {any} state 页面对像
          * @returns {any} 如果指定动作和对象不为空，返回操作成功与否。否则返回当前页面对象
          */
-        state: function(action, state) {
+        state: function (action, state) {
             if (state && state.url) {
                 if (action === "pushState") {
                     window.history.pushState(state, state.title, state.url);
@@ -379,7 +387,7 @@
          * @param {any} opt  实例选项
          * @returns {any} 当前实例选项信息
          */
-        sysVer: function(opt) {
+        sysVer: function (opt) {
             var ossPjax = this;
 
             if (opt) {
@@ -395,7 +403,7 @@
         sysVerCheckCount: 0
     };
 
-  
+
     ///**
     // *  检查服务器版本
     // * @param {any} ossPjax
@@ -403,15 +411,15 @@
     // */
     function checkServerVersion(ossPjax, mins) {
         var opt = ossPjax.sysOpt;
-        if (!opt.version) 
+        if (!opt.version)
             return;
 
-        if (mins===0) {
+        if (mins === 0) {
             mins = opt.intervalMins;
             setTimeout(function () { checkServerVersion(ossPjax, mins); }, mins * 60 * 1000);
             return;
         }
-      
+
         ossPjax.sysVerCheckCount += 1;
         $.ajax({ url: opt.serverUrl, type: opt.type })
             .done(function (v) {
@@ -420,10 +428,10 @@
                 }
                 if (mins < 20) mins += 1;
             })
-            .fail(function() {
+            .fail(function () {
                 if (mins > 8) mins -= 1;
             }).always(function () {
-                setTimeout(function() { checkServerVersion(ossPjax, mins); }, mins * 60 * 1000);
+                setTimeout(function () { checkServerVersion(ossPjax, mins); }, mins * 60 * 1000);
             });
     }
     function checkContentVsersion(sysOpt, con) {
@@ -444,7 +452,7 @@
     function findPjaxClientVersion(verOpt) {
         typeof verOpt.version == "function" ? verOpt.version() : verOpt.version;
     }
-    function formatUrlWithVersion(url,v) {
+    function formatUrlWithVersion(url, v) {
         if (url.indexOf("_opv=") > 0) {
             url = url.replace(/(_opv=).*?(&)/, "$1" + v + '$2');
         } else {
@@ -472,7 +480,7 @@
         return newState;
     }
 
-    function setPageState(instance, stateCon,state) {
+    function setPageState(instance, stateCon, state) {
         if (!state) {
             if (!stateCon) {
                 //isFirstInitail = true;
@@ -549,7 +557,7 @@
      * @param {any} req
      */
     function setReqUrl(opt, req) {
-      
+
         var q = opt.noQuery;
 
         if (q) {
@@ -577,7 +585,7 @@
         if (!this.onPopstateTriger)
             window.onpopstate = this.onPopstateTriger =
                 function (event) {
-                   
+
                     var pageState = event.state;
                     if (!pageState) return;
 
@@ -607,11 +615,11 @@
         args.shift();
 
         var internalReturn;
-        this.each(function() {
+        this.each(function () {
 
             var $this = $(this);
             var dataName = "oss.pjax";
-            
+
             var cacheData = $this.data(dataName);
             var options = typeof option == "object" && option;
 
@@ -627,7 +635,7 @@
             if (typeof option == "string" && typeof cacheData[option] == "function") {
                 internalReturn = cacheData[option].apply(cacheData, args);
             } else {
-                throw "请检查当前元素(" + options.wraper +")下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
+                throw "请检查当前元素(" + options.wraper + ")下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
             }
         });
 
@@ -649,7 +657,7 @@
         // 不管存不存在直接重新设置值
         var level = curLevel + 1;
         window.osspjaxCurDeepLevel = window.osspjaxNameSpcDeep[nameSpc] = level;
-        
+
         return level;
     }
 
@@ -667,7 +675,7 @@
         $.fn.osspjax = fnPjax;
         $.fn.osspjax.constructor = OssPjax;
         // 冲突控制权的回归处理
-        $.fn.osspjax.noConflict = function() {
+        $.fn.osspjax.noConflict = function () {
             $.fn.osspjax = oldOssPjax;
             return this;
         };
