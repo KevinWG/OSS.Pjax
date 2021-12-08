@@ -98,11 +98,10 @@
          * 格式化内容
          * @param {any} html 原始html
          * @param {any} opt pjax实例选项
-         * @param {any} req 请求信息
          * @param {any} xhr 请求xmlhttprequest
          * @returns {any} 格式化后的内容对象
          */
-        formatContent: function (html, opt, req, xhr) {
+        formatContent: function (html, opt, url, xhr) {
 
             var con = { origin: html, isFull: /<html/i.test(html) };
             var $html = null, $content = null;
@@ -138,13 +137,13 @@
             con.scripts = this.filterAndFind($html, "script").remove();// $html.find("script").remove();
 
             if (!con.title)
-                con.title = $content.attr("title") || $content.data("title") || req.title;
+                con.title = $content.attr("title") ;
 
             $content.hide();
 
             con.content = $content;
             con.version = xhr.getResponseHeader("oss-pjax-ver");
-            con.url = req.url;
+            con.url = url;
 
             return con;
         },
@@ -173,7 +172,7 @@
         self.opt = opt;
 
         // 设置初始页的页面状态值
-        var firstState = setPageState(self);
+        var firstState = setPageState(self,null,null);
         if (opt.push || opt.replace)
             window.history.replaceState(firstState, firstState.title, firstState.url);
 
@@ -195,19 +194,16 @@
                 return;
 
             this.goTo(req);
-            preventDefault(event);
+            preventDefault(event); 
         },
+
         /**
          * 根据请求转移到指定页面
-         * @param {any} req { url:"", title: "", popDirection: 0, popState: null, no_animation:false}
+         * @param {any} req { url:"",  popState: null}
          */
         goTo: function (req) {
             var ossPjax = this;
-
-            //  处理请求地址参数
-            setReqUrl(ossPjax.opt, req);
-
-            ossPjax.getContent(req).done(function (con) {
+            ossPjax.getContent(req.url).done(function (con) {
                 checkContentVsersion(ossPjax.sysOpt, con);
                 var opt = ossPjax.opt;
 
@@ -255,14 +251,16 @@
 
         /**
          *  获取内容
-         * @param {any} req 请求信息
+         * @param {any} url 请求地址
          * @returns {any}  promise对象
          */
-        getContent: function (req) {
+        getContent: function (url) {
             var ossPjax = this;
             var opt = ossPjax.opt;
 
-            var ajaxOpt = $.extend({}, { url: req.remote_url }, opt.ajaxSetting);
+            const realUrl = setReqUrl(ossPjax.opt, url);
+
+            var ajaxOpt = $.extend({}, { url: realUrl }, opt.ajaxSetting);
 
             // 附加数据，版本号处理
             var ver = findPjaxClientVersion(ossPjax.sysOpt) || "1.0";
@@ -289,8 +287,10 @@
             }
             var defer = $.Deferred();
             ossPjax._xhr = $.ajax(ajaxOpt).done(function (resData, textStatus, hr) {
-                var con = pjaxHtmlHelper.formatContent(resData, opt, req, hr);
+
+                var con = pjaxHtmlHelper.formatContent(resData, opt, url, hr);
                 defer.resolve(con);
+
             }).fail(function (hr, textStatus, errMsg) {
                 defer.reject(errMsg, textStatus, hr);
             });
@@ -300,7 +300,7 @@
 
         onPopstate: function (state, direction) {
             if (state && state.url) {
-                this.goTo({ url: state.url, title: state.title, popDirection: direction, popState: state });
+                this.goTo({ url: state.url, title: state.title,  popState: state });
             };
         },
 
@@ -418,34 +418,33 @@
     }
 
 
-    /**
-     * 创建页面置换状态
-     * @param {any} title
-     * @param {any} url
-     */
-    function createState(stateCon, opt) {
-        var newState = {
-            id: new Date().getTime(),
-            nameSpc: opt.nameSpc,
-            title: stateCon.title || document.title,
-            url: stateCon.url || document.URL
-        };
-        return newState;
-    }
-
-    function setPageState(instance, stateCon, state) {
+ 
+    function setPageState(instance, newContent, state) {
         if (!state) {
-            if (!stateCon) {
+            if (!newContent) {
                 //isFirstInitail = true;
-                state = createState({}, instance.opt);
+                state = createState({}, instance.opt.nameSpc);
             } else {
-                state = createState(stateCon, instance.opt);
+                state = createState(newContent, instance.opt.nameSpc);
             }
             state._deepLevel = getDeepLevel(instance.opt.nameSpc);
         }
         return window.osspjaxCurPageState = instance.pageState = state;
     }
-
+       /**
+     * 创建页面置换状态
+     * @param {any} title
+     * @param {any} url
+     */
+        function createState(newContent, nameSpc) {
+            var newState = {
+                id: new Date().getTime(),
+                nameSpc: nameSpc,
+                title: newContent.title || document.title,
+                url: newContent.url || document.URL
+            };
+            return newState;
+        }
     /**
     * 去除url 的 hash值
     * @param {any} location
@@ -499,8 +498,7 @@
         }
 
         return {
-            url: link.href,
-            title: link.title
+            url: link.href
         };
     }
 
@@ -509,23 +507,26 @@
      * @param {any} opt
      * @param {any} req
      */
-    function setReqUrl(opt, req) {
+    function setReqUrl(opt, url) {
 
         var q = opt.noQuery;
+        let _remote_url;
 
         if (q) {
 
             if (typeof q === "function") {
-                req.remote_url = q(req.url);
+                _remote_url = q(url);
             } else {
-                var index = req.url.indexOf("?");
+                var index = url.indexOf("?");
                 if (index > 0)
-                    req.remote_url = req.url.substring(0, index);
+                    _remote_url = url.substring(0, index);
             }
         }
 
-        if (!req.remote_url)
-            req.remote_url = req.url;
+        if (!_remote_url)
+            _remote_url = url;
+
+        return _remote_url;
     }
 
     function addPopHandler(nameSpc, handler) {
