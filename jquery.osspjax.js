@@ -22,31 +22,8 @@
             click: function (event) { },
 
             /**
-             * 加载远程内容之前事件
-             * @param {any} ajaxOpt  ajax请求相关参数，可以更改
-             */
-            beforeRemote: function (ajaxOpt) { },
-
-            /**
-             * 过滤请求结果
-             * @param {any} res  请求结果
-             * @param {any} textState ajax 请求状态
-             * @param {any} xhr  xmlhttprequest
-             * @returns {any} 如果返回false 会触发 remoteError 事件。 或者返回处理后的html继续后续流程
-             */
-            resultFilter: function (res, textState, xhr) { return res; },
-
-            /**
-             * 获取内容结束事件
-             * @param {any} errMsg  请求结果
-             * @param {any} textState ajax 请求状态
-             * @param {any} xhr  xmlhttprequest
-             */
-            remoteError: function (errMsg, textState, xhr) { },
-
-            /**
              * 移除旧容器，可添加动画
-             * @param {any} $oldContainer 旧容器
+             * @param {any} $oldContainer 旧容器（jquery对象）
              */
             removeOld: function ($oldContainer) {
                 $oldContainer.remove();
@@ -54,81 +31,67 @@
 
             /**
              * 显示新容器
-             * @param {any} $newContainer 新容器
-             * @param {any} afterShow showNew结束前必须执行的回调
+             * @param {any} $newContainer 新容器（jquery对象）
              */
-            showNew: function ($newContainer, afterShow) {
+            showNew: function ($newContainer) {
                 $newContainer.show("slow");
-                afterShow();
             },
-
-            /**
-             * 结束事件
-             * @param {any} newState 新的页面状态记录
-             */
-            complete: function (newState) { }
         }
     };
 
-    var pjaxHtmlHelper = {
+    const pjaxHtmlHelper = {
         /**
          *    *  去掉页面中已经重复的js和css文件   
          * @param {any} con  内容对象
          * @param {any} opt  实例选项
          */
-        filterRepeatScripts: function (con, opt) {
+        filterScripts: function (con, opt) {
             // 清除上个页面相关js，css 内容
             $("script[oss-pjax-namespc='" + opt.nameSpc + "']").remove();
 
             var pageScripts = $('script');
-            con.scripts = con.scripts.filter(function () {
-                var $nConItem = $(this);
-                var nId = this["src"] || this.id || this.innerText;
 
-                if (!$nConItem.attr("oss-pjax-namespc")) {
-                    $nConItem.attr("oss-pjax-namespc", opt.nameSpc);
-                }
+            con.scripts.each(function () {
+
+                var nConItem = this;
+                var nId = nConItem["src"] || nConItem.id || nConItem.innerText;
 
                 for (var i = 0; i < pageScripts.length; i++) {
+
                     var pageItem = pageScripts[i];
                     var pageId = pageItem["src"] || pageItem.id || pageItem.innerText;
+
                     if (nId === pageId) {
+                        if(pageItem.hasAttribute("oss-pjax-global"))
+                            return;
 
-                        if ($nConItem.attr("oss-pjax-once")) {
-                            $nConItem.remove();
-                            return false;
-                        }
-
-                        console.info("请求页面地址:" + con.url + " 包含了已经存在的" + pageId + " js文件/代码,将会重新加载！")
-                        $(pageItem).remove();
-                        return true;
+                        console.info("请求页面地址:" + con.url + " 包含了已经存在的" + pageId + " js文件/代码,将会重新加载！");
+                        pageItem.parentNode.removeChild(pageItem);
                     }
                 }
-                return true;
 
+                if (!nConItem.hasAttribute("oss-pjax-namespc")) {
+                    nConItem.setAttribute("oss-pjax-namespc", opt.nameSpc);
+                }
+                pjaxHtmlHelper.installScript(nConItem);
             });
         },
 
-        addNewScript: function (con) {
-            con.scripts.appendTo($("body"));
-            //con.scripts.each(function () {
-            //    var script = document.createElement("script");
+        /**
+         * 原生追加js方法（不使用jquery append方式）
+         * @param  sNode 
+         * @returns 
+         */
+        installScript: function (sNode) {
+            if(!sNode) return;
 
-            //    if (this.id) script.id = this.id;
-            //    if (this.type) script.type = this.type;
-            //    if (this.class) script.class = this.class;
-
-            //    var src = this.src;
-            //    if (src) {
-            //        script.src = src;
-            //    } else {
-            //        script.innerHTML = $(this).html();
-            //    }
-
-            //    script.setAttribute("oss-pjax-namespc", $(this).attr("oss-pjax-namespc"));
-            //    script.setAttribute("oss-pjax-once", $(this).attr("oss-pjax-once"));
-            //    document.body.appendChild(script);
-            //});
+            const script = document.createElement("script");
+            const attrs=sNode.attributes;
+            for (let index = 0; index < attrs.length; index++) {
+                const attr = attrs[index];
+                script.setAttribute(attr.name,attr.value);  
+            }  
+            document.body.appendChild(script);
         },
 
         /**
@@ -157,7 +120,6 @@
 
                 $content = this.filterAndFind($body, "." + opt.fragment).first();// $body.filter("." + opt.fragment).add($body.find("." + opt.fragment)).first();
                 if (!$content.length) {
-
                     $content = $("<div class='" + opt.fragment + "'></div>");
                     $content.append($body);
                 }
@@ -179,8 +141,9 @@
                 con.title = $content.attr("title") || $content.data("title") || req.title;
 
             $content.hide();
+
             con.content = $content;
-            con.version = xhr.getResponseHeader("X-PJAX-Ver");
+            con.version = xhr.getResponseHeader("oss-pjax-ver");
             con.url = req.url;
 
             return con;
@@ -214,8 +177,7 @@
         if (opt.push || opt.replace)
             window.history.replaceState(firstState, firstState.title, firstState.url);
 
-        $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"),
-            "a[oss-pjax-namespc='" + opt.nameSpc + "']",
+        $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"), "a[oss-pjax-namespc='" + opt.nameSpc + "']",
             function (event) {
                 self.click(event);
             });
@@ -267,7 +229,7 @@
                 ossPjax.replaceContent(con);
 
             }).fail(function (errMsg, textStatus, hr) {
-                ossPjax.opt.methods.remoteError(errMsg, textStatus, hr);
+                ossPjax.forceTo(req.url);
             });
         },
 
@@ -285,15 +247,12 @@
             }
 
             opt.methods.removeOld($oldContainer);
-            pjaxHtmlHelper.filterRepeatScripts(con, opt);
-
             $wraper.append(con.content);
-            pjaxHtmlHelper.addNewScript(con);
 
-            opt.methods.showNew(con.content, function () {
-                opt.methods.complete(ossPjax.pageState);
-            });
+            pjaxHtmlHelper.filterScripts(con, opt);
+            opt.methods.showNew(con.content);
         },
+
         /**
          *  获取内容
          * @param {any} req 请求信息
@@ -316,28 +275,22 @@
                 ajaxOpt.data._pav = ver;
             }
 
-            abortXHR(ossPjax.xhr);
-            opt.methods.beforeRemote(ajaxOpt); //  加载之前触发事件
+            abortXHR(ossPjax._xhr);
 
             //  处理ajax的beforeSend
             var oldBeforEvent = ajaxOpt.beforeSend;
             ajaxOpt.beforeSend = function (x) {
-                x.setRequestHeader("X-PJAX-Ver", ver);
-                x.setRequestHeader("X-PJAX", opt.nameSpc);
+                x.setRequestHeader("oss-pjax-ver", ver);
+                x.setRequestHeader("oss-pjax", opt.nameSpc);
 
                 if (oldBeforEvent && typeof oldBeforEvent == "function") {
                     oldBeforEvent();
                 }
             }
             var defer = $.Deferred();
-            ossPjax.xhr = $.ajax(ajaxOpt).done(function (resData, textStatus, hr) {
-                var filterRes = !opt.methods.resultFilter ? resData : opt.methods.resultFilter(resData, textStatus, hr);
-                if (!filterRes) {
-                    defer.reject(resData, textStatus, hr);
-                } else {
-                    var con = pjaxHtmlHelper.formatContent(filterRes, opt, req, hr);
-                    defer.resolve(con);
-                }
+            ossPjax._xhr = $.ajax(ajaxOpt).done(function (resData, textStatus, hr) {
+                var con = pjaxHtmlHelper.formatContent(resData, opt, req, hr);
+                defer.resolve(con);
             }).fail(function (hr, textStatus, errMsg) {
                 defer.reject(errMsg, textStatus, hr);
             });
@@ -611,35 +564,37 @@
 
     function fnPjax(option) {
 
-        var args = Array.apply(null, arguments);
+        const args = Array.apply(null, arguments);
         args.shift();
 
-        var internalReturn;
+        let internalReturn;
         this.each(function () {
 
-            var $this = $(this);
-            var dataName = "oss.pjax";
+            const $this = $(this);
+            const dataName = "oss.pjax";
 
-            var cacheData = $this.data(dataName);
-            var options = typeof option == "object" && option;
+            let cacheData = $this.data(dataName);
+            if(typeof option == "object"){
+                if (!cacheData) {
+                    const options = $.extend(true, {}, defaultOption, option);
 
-            if (!cacheData) {
-                options = $.extend(true, {}, defaultOption, options);
-                setDeepLevel(options.nameSpc);//  在初始化之前执行
-
-                $this.data(dataName, (cacheData = new OssPjax(this, options)));
-                addPopHandler(options.nameSpc, cacheData);
-                return;
-            }
-
-            if (typeof option == "string" && typeof cacheData[option] == "function") {
-                internalReturn = cacheData[option].apply(cacheData, args);
-            } else {
-                throw "请检查当前元素(" + options.wraper + ")下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
-            }
+                    setDeepLevel(options.nameSpc);//  在初始化之前执行
+    
+                    $this.data(dataName, (cacheData = new OssPjax(this, options)));
+                    addPopHandler(options.nameSpc, cacheData);
+                    return;
+                }else {
+                    throw "请检查当前元素(" + options.wraper + ")下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
+                }
+            }          
+            else if (typeof option == "string" ) {
+                if (cacheData && typeof cacheData[option] == "function") {
+                    internalReturn = cacheData[option].apply(cacheData, args); 
+                }            
+            } 
         });
 
-        if (internalReturn !== undefined)
+        if (internalReturn)
             return internalReturn;
         else
             return this;

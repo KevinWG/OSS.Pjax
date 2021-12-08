@@ -29,4 +29,7 @@
          };
     }
  };
- OssPjax.start(1);
+
+ $(function(){
+    OssPjax.start(1);
+ })

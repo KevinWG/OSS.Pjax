@@ -1,26 +1,28 @@
 # OSS.Pjax
-使用 pushstate + ajax 增强用户体验框架，支持多个实例同时存在
+使用 pushstate + ajax 增强用户体验框架，完成单页的效果，基础原理就是拦截a标签地址（或者直接传入页面url）通过ajax加载对应html页面，替换指定容器内容，再通过pushstate方法更改浏览器地址，同时绑定浏览器的前进后退操作完成反向操作。
 
 #使用介绍
 
 ```javascript
-	var opt={}
-	var pjaxInstance =  $("#select_id").osspjax();
+	var opt={ ... }
+	var pjaxInstance =  $("#select_id").osspjax(opt);  
+    // 在id为select_id容器内所有a[命名空间]标签（如： <a oss-pjax-namespc="oss-pjax" href="index1.html"> index1</a>） 将会被拦截
+    
 	// 自带默认参数如下：
 	 var defaultOption = {
         push: true,
         replace: false,
         noQuery: false,//  true 或 function(reqUrl){ return "处理后的url"}
 
-        nameSpc: "oss-pjax",  //实例命名空间，当存在多个实例必须不同
-        wraper: "#oss-wraper", // 核心控制器（类名或Id），容器的上一级
-        fragment: "osspjax-container", // 容器类名，会被动态删除加载
+        nameSpc: "oss-pjax",  // 实例命名空间，当存在多个实例必须不同
+        wraper: "#oss-wraper", // 控制器id，获取到的内容将插入当前元素内部
+        fragment: "osspjax-container", // 容器类名，服务器返回全量html时，根据此类名获取页面更新内容，注意使用的是类名，方便部分自定义页面切换动画可以新旧内容在控制器中同时存在
 
         ajaxSetting: {
             timeout: 0,
             type: "GET",
             dataType: "html"
-        },
+        }, // 获取服务端内容时的ajax配置
 
         methods: {
             /**
@@ -28,29 +30,6 @@
              * @param {any} event 触发事件对象
              */
             click: function(event) {},
-
-            /**
-             * 加载远程内容之前事件
-             * @param {any} ajaxOpt  ajax请求相关参数，可以更改
-             */
-            beforeRemote: function(ajaxOpt) {},
-
-            /**
-             * 过滤请求结果
-             * @param {any} res  请求结果
-             * @param {any} textState ajax 请求状态
-             * @param {any} xhr  xmlhttprequest
-             * @returns {any} 如果返回false 会触发 remoteError 事件。 或者返回处理后的html继续后续流程
-             */
-            resultFilter: function(res, textState, xhr) { return res; },
-
-            /**
-             * 获取内容结束事件
-             * @param {any} errMsg  请求结果
-             * @param {any} textState ajax 请求状态
-             * @param {any} xhr  xmlhttprequest
-             */
-            remoteError: function(errMsg, textState, xhr) {},
 
             /**
              * 移除旧容器，可添加动画
@@ -65,16 +44,9 @@
              * @param {any} $newContainer 新容器
              * @param {any} afterShow showNew结束前必须执行的回调
              */
-            showNew: function($newContainer,afterShow) {
+            showNew: function($newContainer) {
                 $newContainer.show("slow");
-                afterShow();
-            },
-            
-            /**
-             * 结束事件
-             * @param {any} newState 新的页面状态记录
-             */
-            complete: function(newState) {}
+            }
         }
     };
 ```
@@ -102,19 +74,21 @@
 ```javascript
   <meta http-equiv="app-version" content="1.1.0" />
 ```
+
 如果默认参数和头信息中都没有设置，则请求中永久附带 _opv=1.0 发送请求
 如果存在客户端初始版本相关信息，则有两种方式进行客户端和服务端的版本比对
-   1. 在每次请求的响应（Response）的头信息中添加 X-PJAX-Ver 版本信息，客户端自动会自动进行校验和刷新切换，如果不存在客户端不会进行比对		
+   1. 在每次请求的响应（Response）的头信息中添加 oss-pjax-ver 版本信息，客户端自动会自动进行校验和刷新切换，如果不存在客户端不会进行比对		
    2. 通过独立的服务端版本校验接口，默认不启用需要手动开启，客户端会在间隔[5-20]分钟内发起检测（间隔时间客户端会动态调整）（多个实例时，建议只开启一次）
 
-同时为方便服务端进行动态调整和辨识，在请求的头信息中会附件如下两个属性：
-X-PJAX-Ver:当前客户端版本号
-X-PJAX: 当前实例命名空间
+同时为方便服务端进行动态调整和辨识，在客户端请求的头信息中会附件如下两个属性：
+oss-pjax-ver:当前客户端版本号
+oss-pjax: 当前实例命名空间
 
 
-#重复脚本控制
-针对某些js文件，可能只有少量页面依赖使用，希望能在使用相关页面时只加载渲染一次，可以在引用时使用oss-pjax-once属性，如下：
+#脚本控制
+    OSSPjax在每次更新页面时，会将新页面的js脚本和当前页面的js脚本比较，如果脚本已经存在会重新引用加载。较好使用pjax的方式，是由服务器端针对pjax客户端请求返回局部视图和局部js脚本。
+    但是在服务器端不支持局部只能返回全量html的情况下，针对站点全局的js文件，可以在引用时添加 oss-pjax-global 属性，OSSPjax将不会进行重新加载操作，如：
 
 ```javascript
-	<script src="/lib/oss/oss.table.js" oss-pjax-once="true"></script>
+	<script oss-pjax-global src="/lib/oss/oss.table.js"></script>
 ```
