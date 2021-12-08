@@ -10,9 +10,9 @@
                 var name = $(this).attr("http-equiv");
                 return name && name.toLowerCase() === "oss-pjax-ver";
             }).attr("content");
-        }, 
+        },
 
-        
+
         wraper: "#oss-wraper",
         fragment: "osspjax-container",
 
@@ -102,6 +102,8 @@
                 const attr = attrs[index];
                 script.setAttribute(attr.name, attr.value);
             }
+            script.innerHTML = sNode.innerHTML;
+
             document.body.appendChild(script);
         },
 
@@ -169,10 +171,10 @@
 
 
 
-       //  ===========  请求处理 Start ============
-    
+    //  ===========  请求处理 Start ============
+
     // 终止请求
-     function abortXHR(xhr) {
+    function abortXHR(xhr) {
         if (xhr && xhr.readyState < 4) {
             xhr.onreadystatechange = $.noop;
             xhr.abort();
@@ -250,12 +252,12 @@
         };
     }
 
-     /**
-     *  获取内容
-     * @param {any} url 请求地址
-     * @returns {any}  promise对象
-     */
-    function getContent (url,ossPjax) {
+    /**
+    *  获取内容
+    * @param {any} url 请求地址
+    * @returns {any}  promise对象
+    */
+    function getContent(url, ossPjax) {
         var opt = ossPjax._option;
         const realUrl = getRealReqUrl(ossPjax._option, url);
 
@@ -318,7 +320,7 @@
         typeof clientVer == "function" ? clientVer() : clientVer;
     }
 
-    function forceTo(url, v){
+    function forceTo(url, v) {
         if (v) {
             if (url.indexOf("_opv=") > 0) {
                 url = url.replace(/(_opv=).*?(&)/, "$1" + v + '$2');
@@ -333,7 +335,7 @@
     }
 
 
-    function replaceContent(ossPjax,con) {
+    function replaceContent(ossPjax, con) {
         var opt = ossPjax._option;
         var $wraper = $(opt.wraper);
 
@@ -357,7 +359,7 @@
     }
     //  ===========  请求处理 end ============
 
-    const OssPjax = function (element, opt) {
+    const OssPjax = function ($ele, opt) {
         var self = this;
         self._option = opt;
 
@@ -366,8 +368,8 @@
         if (opt.push || opt.replace)
             window.history.replaceState(firstState, firstState.title, firstState.url);
 
-        $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"), opt.element,function (event) {
-                self.click(event);
+        $ele.on("click.pjax" + opt.nameSpc.replace(".", "_"), opt.element, function (event) {
+            self.click(event);
         });
     };
 
@@ -390,7 +392,7 @@
         goTo: function (url) {
             this._interGoTo(url);
         },
-     
+
         /**
          * 获取或者设置当前的页面State
          * @param {any} action 动作
@@ -398,7 +400,7 @@
          * @returns {any} 如果指定动作和对象不为空，返回操作成功与否。否则返回当前页面对象
          */
         state: function (action, state) {
-            if (state && state.url) {
+            if (action && state && state.url) {
                 if (action === "pushState") {
                     window.history.pushState(state, state.title, state.url);
                 } else {
@@ -414,15 +416,15 @@
             forceTo(url);
         },
 
-        _pageState:null,
-        _deepLevel:0,
+        _pageState: null,
+        _deepLevel: 0,
         _sysVerCheckCount: 0,
-        _option:null, // 用来保存配置信息
-        _xhr:null, // 保存请求中信息
-        
+        _option: null, // 用来保存配置信息
+        _xhr: null, // 保存请求中信息
+
         _interGoTo: function (url, popedState) {
             const ossPjax = this;
-            getContent(url,ossPjax).done(function (con) {
+            getContent(url, ossPjax).done(function (con) {
                 checkServerContentVsersion(ossPjax, con);
                 const opt = ossPjax._option;
 
@@ -438,15 +440,15 @@
                 } else {
                     setPageState(ossPjax, null, popedState);
                 }
-                replaceContent(ossPjax,con);
+                replaceContent(ossPjax, con);
 
             }).fail(function (errMsg, textStatus, hr) {
                 forceTo(url);
             });
-        }        
+        }
     };
 
- 
+
     //  =============  页面State及事件处理 Start ============
 
     function setPageState(instance, newContent, state) {
@@ -490,25 +492,25 @@
 
                 let handlerSpc = pageState.nameSpc;
                 let curState = window._oss_pjax_PageState;
-             
+
                 if (pageState.nameSpc !== curState.nameSpc
                     && pageState._deepLevel > curState._deepLevel)
                     handlerSpc = curState.nameSpc;
 
                 const h = this.popHandlers[handlerSpc];
-                Popstate(h,pageState);
+                Popstate(h, pageState);
             }
     }
 
-        /**
-         * 浏览器回退前进
-         * @param {} state 
-         */
-         function Popstate (ossInstance,state) {
-            if (state && state.url) {
-                ossInstance._interGoTo(state.url, state);
-            };
-        }
+    /**
+     * 浏览器回退前进
+     * @param {} state 
+     */
+    function Popstate(ossInstance, state) {
+        if (state && state.url) {
+            ossInstance._interGoTo(state.url, state);
+        };
+    }
 
     //  =============  页面State处理 End ============
 
@@ -517,37 +519,36 @@
         const args = Array.apply(null, arguments);
         args.shift();
 
-        let internalReturn;
-        this.each(function () {
+        const $this = this;
+        const dataName = "oss.pjax";
 
-            const $this = $(this);
-            const dataName = "oss.pjax";
+        let cacheData = $this.data(dataName);
+        if (typeof option == "object") {
+            if (!cacheData) {
 
-            let cacheData = $this.data(dataName);
-            if (typeof option == "object") {
-                if (!cacheData) {
-                    const options = $.extend(true, {}, defaultOption, option);
+                const mOptions = $.extend(true, {}, defaultOption, option);
 
-                    setDeepLevel(options.nameSpc);//  在初始化之前执行
+                setDeepLevel(mOptions.nameSpc); //  在初始化之前执行
+                $this.data(dataName, (cacheData = new OssPjax($this, mOptions)));
 
-                    $this.data(dataName, (cacheData = new OssPjax(this, options)));
-                    addPopHandler(options.nameSpc, cacheData);
-                    return;
-                } else {
-                    throw "方法不存在，或者命名空间"+ cacheData._option.nameSpc+"已经在当前元素挂载osspjax控件！";
-                }
+                addPopHandler(mOptions.nameSpc, cacheData);
+
+                return cacheData;
+            } else {
+                throw "方法不存在，或者命名空间" + cacheData._option.nameSpc + "已经在当前元素挂载osspjax控件！";
             }
-            else if (typeof option == "string") {
-                if (cacheData && typeof cacheData[option] == "function") {
-                    internalReturn = cacheData[option].apply(cacheData, args);
-                }
-            }
-        });
+        }
+        else if (typeof option == "string") {
 
-        if (internalReturn)
-            return internalReturn;
-        else
-            return this;
+            var cName = option.toLowerCase();
+            if (cacheData && typeof cacheData[cName] == "function") {
+                return cacheData[cName].apply(cacheData, args);
+            }
+            else if (!cacheData && cName == "state") {
+                return false;
+            }
+        }
+        return this;
     }
 
 
