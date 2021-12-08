@@ -8,7 +8,7 @@
         clientVer: function () {
             return $("meta").filter(function () {
                 var name = $(this).attr("http-equiv");
-                return name && name.toLowerCase() === "app-version";
+                return name && name.toLowerCase() === "oss-pjax-ver";
             }).attr("content");
         }, 
 
