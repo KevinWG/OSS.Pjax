@@ -516,8 +516,7 @@
 
     function fnPjax(option) {
 
-        const args = Array.apply(null, arguments);
-        args.shift();
+      
 
         const $this = this;
         const dataName = "oss.pjax";
@@ -540,6 +539,9 @@
         }
         else if (typeof option == "string") {
 
+            const args = Array.apply(null, arguments);
+            args.shift();
+            
             var cName = option.toLowerCase();
             if (cacheData && typeof cacheData[cName] == "function") {
                 return cacheData[cName].apply(cacheData, args);
