@@ -12,9 +12,12 @@
             }).attr("content");
         }, 
 
-        nameSpc: "oss-pjax",
+        
         wraper: "#oss-wraper",
         fragment: "osspjax-container",
+
+        nameSpc: "oss-pjax",
+        element: "a[oss-pjax-namespc='oss-pjax']",
 
         ajaxSetting: {
             timeout: 0,
@@ -363,10 +366,9 @@
         if (opt.push || opt.replace)
             window.history.replaceState(firstState, firstState.title, firstState.url);
 
-        $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"), "a[oss-pjax-namespc='" + opt.nameSpc + "']",
-            function (event) {
+        $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"), opt.element,function (event) {
                 self.click(event);
-            });
+        });
     };
 
     // 实例属性： state 是当前页面信息，   xhr 远程请求实体信息
@@ -532,7 +534,7 @@
                     addPopHandler(options.nameSpc, cacheData);
                     return;
                 } else {
-                    throw "请检查当前元素(" + options.wraper + ")下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
+                    throw "方法不存在，或者命名空间"+ cacheData._option.nameSpc+"已经在当前元素挂载osspjax控件！";
                 }
             }
             else if (typeof option == "string") {

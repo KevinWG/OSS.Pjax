@@ -6,7 +6,7 @@
 ```javascript
 	var opt={ ... }
 
-    // 在id为select_id容器内所有a[命名空间]标签（如： <a oss-pjax-namespc="oss-pjax" href="index1.html"> index1</a>） 将会被拦截
+    // 默认在id为select_id容器内所有a标签（如： <a oss-pjax-namespc="oss-pjax" href="index1.html">index1</a>） 将会被拦截
 	var pjaxInstance =  $("#select_id").osspjax(opt);  
 
     
@@ -24,9 +24,11 @@
             }).attr("content");
         }, 
 
-        nameSpc: "oss-pjax",  // 实例命名空间，当存在多个实例必须不同
-        wraper: "#oss-wraper", // 控制器id，获取到的内容将插入当前元素内部
-        fragment: "osspjax-container", // 容器类名，服务器返回全量html时，根据此类名获取页面更新内容，注意使用的是类名，方便部分自定义页面切换动画可以新旧内容在控制器中同时存在
+        wraper: "#oss-wraper", // 控制容器，获取到的内容将插入当前元素内部
+        fragment: "osspjax-container", // 内容部分的类名
+
+        nameSpc: "oss-pjax",    // 实例命名空间，当存在多个实例必须不同
+        element: "a[oss-pjax-namespc='oss-pjax']",  //  拦截的元素
 
         ajaxSetting: {
             timeout: 0,
