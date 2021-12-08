@@ -4,6 +4,14 @@
         replace: false,
         noQuery: false,
 
+        // 客户端默认版本号
+        clientVer: function () {
+            return $("meta").filter(function () {
+                var name = $(this).attr("http-equiv");
+                return name && name.toLowerCase() === "app-version";
+            }).attr("content");
+        }, 
+
         nameSpc: "oss-pjax",
         wraper: "#oss-wraper",
         fragment: "osspjax-container",
@@ -36,7 +44,7 @@
             showNew: function ($newContainer) {
                 $newContainer.show("slow");
             },
-        }
+        },
     };
 
     const pjaxHtmlHelper = {
@@ -62,7 +70,7 @@
                     var pageId = pageItem["src"] || pageItem.id || pageItem.innerText;
 
                     if (nId === pageId) {
-                        if(pageItem.hasAttribute("oss-pjax-global"))
+                        if (pageItem.hasAttribute("oss-pjax-global"))
                             return;
 
                         console.info("请求页面地址:" + con.url + " 包含了已经存在的" + pageId + " js文件/代码,将会重新加载！");
@@ -83,14 +91,14 @@
          * @returns 
          */
         installScript: function (sNode) {
-            if(!sNode) return;
+            if (!sNode) return;
 
             const script = document.createElement("script");
-            const attrs=sNode.attributes;
+            const attrs = sNode.attributes;
             for (let index = 0; index < attrs.length; index++) {
                 const attr = attrs[index];
-                script.setAttribute(attr.name,attr.value);  
-            }  
+                script.setAttribute(attr.name, attr.value);
+            }
             document.body.appendChild(script);
         },
 
@@ -137,7 +145,7 @@
             con.scripts = this.filterAndFind($html, "script").remove();// $html.find("script").remove();
 
             if (!con.title)
-                con.title = $content.attr("title") ;
+                con.title = $content.attr("title");
 
             $content.hide();
 
@@ -151,317 +159,26 @@
         _parseHTML: function (htmlString) {
             return $.parseHTML(htmlString, document, true);
         },
-
-        /**
-         *  查找头部meta的版本信息
-         * @returns {any} 头信息中的版本号
-         */
-        findVersion: function () {
-            return $("meta").filter(function () {
-                var name = $(this).attr("http-equiv");
-                return name && name.toLowerCase() === "app-version";
-            }).attr("content");
-        },
         filterAndFind: function ($ele, selecter) {
             return $ele.filter(selecter).add($ele.find(selecter));
         }
     };
 
-    var OssPjax = function (element, opt) {
-        var self = this;
-        self.opt = opt;
-
-        // 设置初始页的页面状态值
-        var firstState = setPageState(self,null,null);
-        if (opt.push || opt.replace)
-            window.history.replaceState(firstState, firstState.title, firstState.url);
-
-        $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"), "a[oss-pjax-namespc='" + opt.nameSpc + "']",
-            function (event) {
-                self.click(event);
-            });
-    };
-    // 实例属性： state 是当前页面信息，   xhr 远程请求实体信息
-    // 原型属性： haveSysVerCheck  是否已经开启服务器版本检查
-    OssPjax.prototype = {
-        click: function (event) {
-            var req = formatLinkEvent(event);
-            if (!req)
-                return;
-
-            this.opt.methods.click(event);
-            if (event.isDefaultPrevented())
-                return;
-
-            this.goTo(req);
-            preventDefault(event); 
-        },
-
-        /**
-         * 根据请求转移到指定页面
-         * @param {any} req { url:"",  popState: null}
-         */
-        goTo: function (req) {
-            var ossPjax = this;
-            ossPjax.getContent(req.url).done(function (con) {
-                checkContentVsersion(ossPjax.sysOpt, con);
-                var opt = ossPjax.opt;
-
-                if (!req.popState) {
-                    if (opt.push || opt.replace) {
-                        var newState = setPageState(ossPjax, con);
-                        if (opt.push)
-                            window.history.pushState(newState, newState.title, newState.url);
-                        else if (opt.replace)
-                            window.history.replaceState(newState, newState.title, newState.url);
-                    }
-                } else {
-                    setPageState(ossPjax, null, req.popState);
-                }
-
-                if (con.title && (opt.push || opt.replace))
-                    document.title = con.title;
-
-                ossPjax.replaceContent(con);
-
-            }).fail(function (errMsg, textStatus, hr) {
-                ossPjax.forceTo(req.url);
-            });
-        },
-
-        replaceContent: function (con) {
-            var ossPjax = this;
-            var opt = ossPjax.opt;
-
-            var $wraper = $(opt.wraper);
-
-            var $oldContainer = $wraper.find("." + opt.fragment);
-            if ($.contains($oldContainer, document.activeElement)) {
-                try {
-                    document.activeElement.blur();
-                } catch (e) { }
-            }
-
-            opt.methods.removeOld($oldContainer);
-            $wraper.append(con.content);
-
-            pjaxHtmlHelper.filterScripts(con, opt);
-            opt.methods.showNew(con.content);
-        },
-
-        /**
-         *  获取内容
-         * @param {any} url 请求地址
-         * @returns {any}  promise对象
-         */
-        getContent: function (url) {
-            var ossPjax = this;
-            var opt = ossPjax.opt;
-
-            const realUrl = setReqUrl(ossPjax.opt, url);
-
-            var ajaxOpt = $.extend({}, { url: realUrl }, opt.ajaxSetting);
-
-            // 附加数据，版本号处理
-            var ver = findPjaxClientVersion(ossPjax.sysOpt) || "1.0";
-
-            //  todo  可以添加页面级缓存，并和当前版本号比较（非必要）
-            if (!ajaxOpt.data) ajaxOpt.data = {}
-            if ($.isArray(ajaxOpt.data)) {
-                ajaxOpt.data.push({ name: "_pav", value: ver });
-            } else {
-                ajaxOpt.data._pav = ver;
-            }
-
-            abortXHR(ossPjax._xhr);
-
-            //  处理ajax的beforeSend
-            var oldBeforEvent = ajaxOpt.beforeSend;
-            ajaxOpt.beforeSend = function (x) {
-                x.setRequestHeader("oss-pjax-ver", ver);
-                x.setRequestHeader("oss-pjax", opt.nameSpc);
-
-                if (oldBeforEvent && typeof oldBeforEvent == "function") {
-                    oldBeforEvent();
-                }
-            }
-            var defer = $.Deferred();
-            ossPjax._xhr = $.ajax(ajaxOpt).done(function (resData, textStatus, hr) {
-
-                var con = pjaxHtmlHelper.formatContent(resData, opt, url, hr);
-                defer.resolve(con);
-
-            }).fail(function (hr, textStatus, errMsg) {
-                defer.reject(errMsg, textStatus, hr);
-            });
-
-            return defer.promise();
-        },
-
-        onPopstate: function (state, direction) {
-            if (state && state.url) {
-                this.goTo({ url: state.url, title: state.title,  popState: state });
-            };
-        },
-
-        /**
-         * 获取或者设置当前的页面State
-         * @param {any} action 动作
-         * @param {any} state 页面对像
-         * @returns {any} 如果指定动作和对象不为空，返回操作成功与否。否则返回当前页面对象
-         */
-        state: function (action, state) {
-            if (state && state.url) {
-                if (action === "pushState") {
-                    window.history.pushState(state, state.title, state.url);
-                } else {
-                    window.history.replaceState(state, state.title, state.url);
-                }
-                setPageState(this, null, state);
-                return true;
-            }
-            return this.pageState;
-        },
-
-        forceTo: function (url) {
-            window.location.href = url;
-        },
-
-        sysOpt: {
-            version: pjaxHtmlHelper.findVersion, // 客户端默认版本号
-            checkVer: false, // 默认关闭服务端检测
-            serverUrl: "", // 服务端接口地址，直接返回 如：1.0.0
-            type: "GET", // 服务端接口请求地址
-            intervalMins: 15 // 第一次默认检测间隔时间
-        },
-
-        /**
-         *   设置系统级变量信息，如版本号等
-         * @param {any} opt  实例选项
-         * @returns {any} 当前实例选项信息
-         */
-        sysVer: function (opt) {
-            var ossPjax = this;
-
-            if (opt) {
-                $.extend(ossPjax.sysOpt, opt);
-                if (ossPjax.sysOpt.checkVer && ossPjax.sysVerCheckCount === 0) {
-                    // 定时开始首次检测  
-                    checkServerVersion(ossPjax, 0);
-                }
-                return true;
-            }
-            return ossPjax.SysOpt;
-        },
-        sysVerCheckCount: 0
-    };
 
 
-    ///**
-    // *  检查服务器版本
-    // * @param {any} ossPjax
-    // * @param {any} mins
-    // */
-    function checkServerVersion(ossPjax, mins) {
-        var opt = ossPjax.sysOpt;
-        if (!opt.version)
-            return;
-
-        if (mins === 0) {
-            mins = opt.intervalMins;
-            setTimeout(function () { checkServerVersion(ossPjax, mins); }, mins * 60 * 1000);
-            return;
-        }
-
-        ossPjax.sysVerCheckCount += 1;
-        $.ajax({ url: opt.serverUrl, type: opt.type })
-            .done(function (v) {
-                if (v !== findPjaxClientVersion(opt)) {
-                    window.location.href = formatUrlWithVersion(location.href, v);
-                }
-                if (mins < 20) mins += 1;
-            })
-            .fail(function () {
-                if (mins > 8) mins -= 1;
-            }).always(function () {
-                setTimeout(function () { checkServerVersion(ossPjax, mins); }, mins * 60 * 1000);
-            });
-    }
-    function checkContentVsersion(sysOpt, con) {
-        // 附加数据，版本号处理
-        var clientVer = findPjaxClientVersion(sysOpt);
-        if (!clientVer) {
-            sysOpt.version = con.version;
-            return;
-        }
-
-        //  版本不同，或者内容不存在
-        if ((con.version && con.version !== clientVer)
-            || !con.content) {
-            window.location.href = formatUrlWithVersion(con.url, con.version);
-        }
-    }
-
-    function findPjaxClientVersion(verOpt) {
-        typeof verOpt.version == "function" ? verOpt.version() : verOpt.version;
-    }
-    function formatUrlWithVersion(url, v) {
-        if (url.indexOf("_opv=") > 0) {
-            url = url.replace(/(_opv=).*?(&)/, "$1" + v + '$2');
-        } else {
-            if (url.indexOf("?") < 0)
-                url += "?_opv=" + v;
-            else
-                url += "&_opv=" + v;
-        }
-        return url;
-    }
-
-
- 
-    function setPageState(instance, newContent, state) {
-        if (!state) {
-            if (!newContent) {
-                //isFirstInitail = true;
-                state = createState({}, instance.opt.nameSpc);
-            } else {
-                state = createState(newContent, instance.opt.nameSpc);
-            }
-            state._deepLevel = getDeepLevel(instance.opt.nameSpc);
-        }
-        return window.osspjaxCurPageState = instance.pageState = state;
-    }
-       /**
-     * 创建页面置换状态
-     * @param {any} title
-     * @param {any} url
-     */
-        function createState(newContent, nameSpc) {
-            var newState = {
-                id: new Date().getTime(),
-                nameSpc: nameSpc,
-                title: newContent.title || document.title,
-                url: newContent.url || document.URL
-            };
-            return newState;
-        }
-    /**
-    * 去除url 的 hash值
-    * @param {any} location
-    */
-    function stripHash(location) {
-        return location.href.replace(/#.*/, "");
-    }
-
-    /**
-     *  终止请求
-     * @param {any} xhr
-     */
-    function abortXHR(xhr) {
+       //  ===========  请求处理 Start ============
+    
+    // 终止请求
+     function abortXHR(xhr) {
         if (xhr && xhr.readyState < 4) {
             xhr.onreadystatechange = $.noop;
             xhr.abort();
         }
+    }
+
+    // 去除url 的 hash值
+    function stripHash(location) {
+        return location.href.replace(/#.*/, "");
     }
 
     /**
@@ -497,18 +214,11 @@
             return false;
         }
 
-        return {
-            url: link.href
-        };
+        return link.href;
     }
 
-    /**
-     *  如果启用了过滤参数，请求时去除query参数，适用于模板请求
-     * @param {any} opt
-     * @param {any} req
-     */
-    function setReqUrl(opt, url) {
-
+    // 如果启用了过滤参数，请求时去除query参数，适用于模板请求
+    function getRealReqUrl(opt, url) {
         var q = opt.noQuery;
         let _remote_url;
 
@@ -529,6 +239,241 @@
         return _remote_url;
     }
 
+    function preventDefault(event) {
+        if (event.preventDefault) {
+            event.preventDefault();
+        } else {
+            event.returnValue = false;
+        };
+    }
+
+     /**
+     *  获取内容
+     * @param {any} url 请求地址
+     * @returns {any}  promise对象
+     */
+    function getContent (url,ossPjax) {
+        var opt = ossPjax._option;
+        const realUrl = getRealReqUrl(ossPjax._option, url);
+
+        var ajaxOpt = $.extend({}, { url: realUrl }, opt.ajaxSetting);
+
+        // 附加数据，版本号处理
+        var ver = exeClientVersion(opt.clientVer) || "1.0";
+
+        //  todo  可以添加页面级缓存，并和当前版本号比较（非必要）
+        if (!ajaxOpt.data) ajaxOpt.data = {}
+        if ($.isArray(ajaxOpt.data)) {
+            ajaxOpt.data.push({ name: "_pav", value: ver });
+        } else {
+            ajaxOpt.data._pav = ver;
+        }
+
+        abortXHR(ossPjax._xhr);
+
+        //  处理ajax的beforeSend
+        var oldBeforEvent = ajaxOpt.beforeSend;
+        ajaxOpt.beforeSend = function (x) {
+            x.setRequestHeader("oss-pjax-ver", ver);
+            x.setRequestHeader("oss-pjax", opt.nameSpc);
+
+            if (oldBeforEvent && typeof oldBeforEvent == "function") {
+                oldBeforEvent();
+            }
+        }
+
+        var defer = $.Deferred();
+        ossPjax._xhr = $.ajax(ajaxOpt).done(function (resData, textStatus, hr) {
+
+            var con = pjaxHtmlHelper.formatContent(resData, opt, url, hr);
+            defer.resolve(con);
+
+        }).fail(function (hr, textStatus, errMsg) {
+            defer.reject(errMsg, textStatus, hr);
+        });
+
+        return defer.promise();
+    };
+
+    // 检测服务端返回版本信息
+    function checkServerContentVsersion(ossPjax, con) {
+        const cF = ossPjax._option.clientVer;
+
+        var clientVer = exeClientVersion(cF);
+        if (!clientVer) {
+            ossPjax._option.clientVer = con.version;
+            return;
+        }
+
+        //  版本不同，或者内容不存在
+        if ((con.version && con.version !== clientVer) || !con.content) {
+            forceTo(con.url, con.version);
+        }
+    }
+
+    function exeClientVersion(clientVer) {
+        typeof clientVer == "function" ? clientVer() : clientVer;
+    }
+
+    function forceTo(url, v){
+        if (v) {
+            if (url.indexOf("_opv=") > 0) {
+                url = url.replace(/(_opv=).*?(&)/, "$1" + v + '$2');
+            } else {
+                if (url.indexOf("?") < 0)
+                    url += "?_opv=" + v;
+                else
+                    url += "&_opv=" + v;
+            }
+        }
+        window.location.href = url;
+    }
+
+
+    function replaceContent(ossPjax,con) {
+        var opt = ossPjax._option;
+        var $wraper = $(opt.wraper);
+
+        var $oldContainer = $wraper.find("." + opt.fragment);
+        if ($.contains($oldContainer, document.activeElement)) {
+            try {
+                document.activeElement.blur();
+            } catch (e) { }
+        }
+        // 替换标题
+        if (con.title && (opt.push || opt.replace))
+            document.title = con.title;
+        // 清理目标
+        opt.methods.removeOld($oldContainer);
+        // 追加新内容
+        $wraper.append(con.content);
+        // 过滤安装脚本
+        pjaxHtmlHelper.filterScripts(con, opt);
+        // 展示
+        opt.methods.showNew(con.content);
+    }
+    //  ===========  请求处理 end ============
+
+    const OssPjax = function (element, opt) {
+        var self = this;
+        self._option = opt;
+
+        // 设置初始页的页面状态值
+        var firstState = setPageState(self, null, null);
+        if (opt.push || opt.replace)
+            window.history.replaceState(firstState, firstState.title, firstState.url);
+
+        $(element).on("click.pjax" + opt.nameSpc.replace(".", "_"), "a[oss-pjax-namespc='" + opt.nameSpc + "']",
+            function (event) {
+                self.click(event);
+            });
+    };
+
+    // 实例属性： state 是当前页面信息，   xhr 远程请求实体信息
+    // 原型属性： haveSysVerCheck  是否已经开启服务器版本检查
+    OssPjax.prototype = {
+        click: function (event) {
+            var url = formatLinkEvent(event);
+            if (!url)
+                return;
+
+            this._option.methods.click(event);
+            if (event.isDefaultPrevented())
+                return;
+
+            this.goTo(url);
+            preventDefault(event);
+        },
+
+        goTo: function (url) {
+            this._interGoTo(url);
+        },
+     
+        /**
+         * 获取或者设置当前的页面State
+         * @param {any} action 动作
+         * @param {any} state 页面对像
+         * @returns {any} 如果指定动作和对象不为空，返回操作成功与否。否则返回当前页面对象
+         */
+        state: function (action, state) {
+            if (state && state.url) {
+                if (action === "pushState") {
+                    window.history.pushState(state, state.title, state.url);
+                } else {
+                    window.history.replaceState(state, state.title, state.url);
+                }
+                setPageState(this, null, state);
+                return true;
+            }
+            return this._pageState;
+        },
+
+        forceTo: function (url) {
+            forceTo(url);
+        },
+
+        _pageState:null,
+        _deepLevel:0,
+        _sysVerCheckCount: 0,
+        _option:null, // 用来保存配置信息
+        _xhr:null, // 保存请求中信息
+        
+        _interGoTo: function (url, popedState) {
+            const ossPjax = this;
+            getContent(url,ossPjax).done(function (con) {
+                checkServerContentVsersion(ossPjax, con);
+                const opt = ossPjax._option;
+
+                if (!popedState) {
+                    // 正常浏览器请求
+                    if (opt.push || opt.replace) {
+                        const newState = setPageState(ossPjax, con);
+                        if (opt.push)
+                            window.history.pushState(newState, newState.title, newState.url);
+                        else if (opt.replace)
+                            window.history.replaceState(newState, newState.title, newState.url);
+                    }
+                } else {
+                    setPageState(ossPjax, null, popedState);
+                }
+                replaceContent(ossPjax,con);
+
+            }).fail(function (errMsg, textStatus, hr) {
+                forceTo(url);
+            });
+        }        
+    };
+
+ 
+    //  =============  页面State及事件处理 Start ============
+
+    function setPageState(instance, newContent, state) {
+        if (!state) {
+            if (!newContent) {
+                //isFirstInitail = true;
+                state = createState({}, instance._option.nameSpc);
+            } else {
+                state = createState(newContent, instance._option.nameSpc);
+            }
+            state._deepLevel = getDeepLevel(instance._option.nameSpc);
+        }
+        return window._oss_pjax_PageState = instance._pageState = state;
+    }
+    /**
+  * 创建页面置换状态
+  * @param {any} title
+  * @param {any} url
+  */
+    function createState(newContent, nameSpc) {
+        var newState = {
+            id: new Date().getTime(),
+            nameSpc: nameSpc,
+            title: newContent.title || document.title,
+            url: newContent.url || document.URL
+        };
+        return newState;
+    }
+
     function addPopHandler(nameSpc, handler) {
 
         if (!this.popHandlers)
@@ -537,31 +482,33 @@
         this.popHandlers[nameSpc] = handler;
 
         if (!this.onPopstateTriger)
-            window.onpopstate = this.onPopstateTriger =
-                function (event) {
+            window.onpopstate = this.onPopstateTriger = function (event) {
+                let pageState = event.state;
+                if (!pageState) return;
 
-                    var pageState = event.state;
-                    if (!pageState) return;
+                let handlerSpc = pageState.nameSpc;
+                let curState = window._oss_pjax_PageState;
+             
+                if (pageState.nameSpc !== curState.nameSpc
+                    && pageState._deepLevel > curState._deepLevel)
+                    handlerSpc = curState.nameSpc;
 
-                    var handlerSpc = pageState.nameSpc;
-                    var curState = window.osspjaxCurPageState;
-                    var direction = curState.id < pageState.id ? 1 : 2; //  1 . 前进   2. 后退
-
-                    if (pageState.nameSpc !== curState.nameSpc
-                        && pageState._deepLevel > curState._deepLevel)
-                        handlerSpc = curState.nameSpc;
-
-                    var h = this.popHandlers[handlerSpc];
-                    h.onPopstate(pageState, direction);
-                }
+                const h = this.popHandlers[handlerSpc];
+                Popstate(h,pageState);
+            }
     }
-    function preventDefault(event) {
-        if (event.preventDefault) {
-            event.preventDefault();
-        } else {
-            event.returnValue = false;
-        };
-    }
+
+        /**
+         * 浏览器回退前进
+         * @param {} state 
+         */
+         function Popstate (ossInstance,state) {
+            if (state && state.url) {
+                ossInstance._interGoTo(state.url, state);
+            };
+        }
+
+    //  =============  页面State处理 End ============
 
     function fnPjax(option) {
 
@@ -575,24 +522,24 @@
             const dataName = "oss.pjax";
 
             let cacheData = $this.data(dataName);
-            if(typeof option == "object"){
+            if (typeof option == "object") {
                 if (!cacheData) {
                     const options = $.extend(true, {}, defaultOption, option);
 
                     setDeepLevel(options.nameSpc);//  在初始化之前执行
-    
+
                     $this.data(dataName, (cacheData = new OssPjax(this, options)));
                     addPopHandler(options.nameSpc, cacheData);
                     return;
-                }else {
+                } else {
                     throw "请检查当前元素(" + options.wraper + ")下是否已经绑定osspjax控件，或者当前调用方法是否不存在！";
                 }
-            }          
-            else if (typeof option == "string" ) {
+            }
+            else if (typeof option == "string") {
                 if (cacheData && typeof cacheData[option] == "function") {
-                    internalReturn = cacheData[option].apply(cacheData, args); 
-                }            
-            } 
+                    internalReturn = cacheData[option].apply(cacheData, args);
+                }
+            }
         });
 
         if (internalReturn)
@@ -603,22 +550,22 @@
 
 
     function setDeepLevel(nameSpc) {
-        var curLevel = window.osspjaxCurDeepLevel;
+        var curLevel = window._oss_pjax_CurDeepLevel;
 
         if (!curLevel) {
-            window.osspjaxCurDeepLevel = curLevel = 0;
-            window.osspjaxNameSpcDeep = [];
+            window._oss_pjax_CurDeepLevel = curLevel = 0;
+            window._oss_pjax_NameSpcDeep = [];
         }
 
         // 不管存不存在直接重新设置值
         var level = curLevel + 1;
-        window.osspjaxCurDeepLevel = window.osspjaxNameSpcDeep[nameSpc] = level;
+        window._oss_pjax_CurDeepLevel = window._oss_pjax_NameSpcDeep[nameSpc] = level;
 
         return level;
     }
 
     function getDeepLevel(nameSpc) {
-        return window.osspjaxNameSpcDeep[nameSpc];
+        return window._oss_pjax_NameSpcDeep[nameSpc];
     }
 
     var isSupport = window.history &&
