@@ -223,7 +223,7 @@
     }
 
     // 如果启用了过滤参数，请求时去除query参数，适用于模板请求
-    function getRealReqUrl(opt, url) {
+    function getRealReqUrl(opt, url, ver) {
         var q = opt.noQuery;
         let _remote_url;
 
@@ -241,7 +241,7 @@
         if (!_remote_url)
             _remote_url = url;
 
-        return _remote_url;
+        return appVersionToUrl(_remote_url, ver);
     }
 
     function preventDefault(event) {
@@ -258,21 +258,12 @@
     * @returns {any}  promise对象
     */
     function getContent(url, ossPjax) {
-        var opt = ossPjax._option;
-        const realUrl = getRealReqUrl(ossPjax._option, url);
-
-        var ajaxOpt = $.extend({}, { url: realUrl }, opt.ajaxSetting);
-
+        const opt = ossPjax._option;
         // 附加数据，版本号处理
-        var ver = exeClientVersion(opt.clientVer) || "1.0";
+        const ver = exeClientVersion(opt.clientVer) || "1.0";
 
-        //  todo  可以添加页面级缓存，并和当前版本号比较（非必要）
-        if (!ajaxOpt.data) ajaxOpt.data = {}
-        if ($.isArray(ajaxOpt.data)) {
-            ajaxOpt.data.push({ name: "_pav", value: ver });
-        } else {
-            ajaxOpt.data._pav = ver;
-        }
+        const realUrl = getRealReqUrl(ossPjax._option, url, ver);
+        const ajaxOpt = $.extend({}, { url: realUrl }, opt.ajaxSetting);
 
         abortXHR(ossPjax._xhr);
 
@@ -281,7 +272,6 @@
         ajaxOpt.beforeSend = function (x) {
             x.setRequestHeader("oss-pjax-ver", ver);
             x.setRequestHeader("oss-pjax", opt.nameSpc);
-
             if (oldBeforEvent && typeof oldBeforEvent == "function") {
                 oldBeforEvent();
             }
@@ -303,7 +293,6 @@
     // 检测服务端返回版本信息
     function checkServerContentVsersion(ossPjax, con) {
         const cF = ossPjax._option.clientVer;
-
         var clientVer = exeClientVersion(cF);
         if (!clientVer) {
             ossPjax._option.clientVer = con.version;
@@ -320,7 +309,11 @@
         typeof clientVer == "function" ? clientVer() : clientVer;
     }
 
-    function forceTo(url, v) {
+    function forceTo(url, version) {
+        window.location.href = appVersionToUrl(url, version);
+    }
+
+    function appVersionToUrl(url, v) {
         if (v) {
             if (url.indexOf("_opv=") > 0) {
                 url = url.replace(/(_opv=).*?(&)/, "$1" + v + '$2');
@@ -331,7 +324,7 @@
                     url += "&_opv=" + v;
             }
         }
-        window.location.href = url;
+        return url;
     }
 
 
@@ -516,7 +509,7 @@
 
     function fnPjax(option) {
 
-      
+
 
         const $this = this;
         const dataName = "oss.pjax";
@@ -541,7 +534,7 @@
 
             const args = Array.apply(null, arguments);
             args.shift();
-            
+
             if (cacheData && typeof cacheData[option] == "function") {
                 return cacheData[option].apply(cacheData, args);
             }
