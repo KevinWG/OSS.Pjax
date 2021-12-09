@@ -542,11 +542,10 @@
             const args = Array.apply(null, arguments);
             args.shift();
             
-            var cName = option.toLowerCase();
-            if (cacheData && typeof cacheData[cName] == "function") {
-                return cacheData[cName].apply(cacheData, args);
+            if (cacheData && typeof cacheData[option] == "function") {
+                return cacheData[option].apply(cacheData, args);
             }
-            else if (!cacheData && cName == "state") {
+            else if (!cacheData && option == "state") {
                 return false;
             }
         }
