@@ -4,13 +4,13 @@
         push: true,
         replace: false,
 
-        // 加载地址时，是否去除url参数，可以自定义方法或如： function(reqUrl){ return "处理后的url"}
+        // 加载地址时，是否去除url参数，可以自定义参数返回处理后的地址
         noQuery: false,
 
-        container: "#oss-wraper", // 控制容器，获取到的内容将插入当前元素内部
-        element: "a[oss-pjax-namespc='oss-pjax']",//  拦截的元素
+        container: "#oss-wraper",
+        element: "a[oss-pjax-namespc='oss-pjax']",
 
-        nameSpc: "oss-pjax", // 实例命名空间，当存在多个实例，特别是嵌套实例时必须不同，否则浏览器的回退前进操作可能混乱
+        nameSpc: "oss-pjax",
         loadingTemplate: '<div style="width:100%;margin-top:10;padding:10;text-align:center;">加载中</div>',
 
         ajaxSetting: {
@@ -433,7 +433,7 @@
             const opt = this._option;
             const loadType = "append";
 
-            getContent(ossPjax, url, loadType).done(function (con) {
+            getContent(this, url, loadType).done(function (con) {
 
                 checkResponseVsersion(opt, con);
 
@@ -591,7 +591,7 @@
         else if (typeof option == "string") {
 
             const args = Array.apply(null, arguments);
-            args.shift();
+            args.shift(); // 排除 option 本身
 
             if (cacheData && typeof cacheData[option] == "function") {
                 return cacheData[option].apply(cacheData, args);
