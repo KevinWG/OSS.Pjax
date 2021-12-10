@@ -19,55 +19,55 @@
 
 ```javascript
 	// 自带默认参数如下：
-	 var defaultOption = {
+    var defaultOption = {
+        // 浏览器状态修改方式， push会加入window.history， replace 不会
         push: true,
         replace: false,
-        noQuery: false,//  true 或 function(reqUrl){ return "处理后的url"}
 
-        // 客户端默认版本号获取方法
-        clientVer: function () {
-            return $("meta").filter(function () {
-                var name = $(this).attr("http-equiv");
-                return name && name.toLowerCase() === "oss-pjax-ver";
-            }).attr("content");
-        }, 
+        // 加载地址时，是否去除url参数，可以自定义方法或如： function(reqUrl){ return "处理后的url"}
+        noQuery: false,
 
-        wraper: "#oss-wraper", // 控制容器，获取到的内容将插入当前元素内部
-        fragment: "osspjax-container", // 内容部分的类名
+        container: "#oss-wraper", // 控制容器，获取到的内容将插入当前元素内部
+        element: "a[oss-pjax-namespc='oss-pjax']",//  拦截的元素
 
-        nameSpc: "oss-pjax",    
-        // 实例命名空间，当存在多个实例，特别是嵌套实例时必须不同，否则浏览器的回退前进操作可能混乱
-        element: "a[oss-pjax-namespc='oss-pjax']",  //  拦截的元素
+        nameSpc: "oss-pjax", // 实例命名空间，当存在多个实例，特别是嵌套实例时必须不同，否则浏览器的回退前进操作可能混乱
+        loadingTemplate: '<div style="width:100%;margin-top:10;padding:10;text-align:center;">加载中</div>',
 
         ajaxSetting: {
             timeout: 0,
             type: "GET",
             dataType: "html"
-        }, // 获取服务端内容时的ajax配置
+        },
 
         methods: {
             /**
-             *  点击时初始执行事件
+             *  点击事件，   可以通过 event.preventDefault()取消后续执行
              * @param {any} event 触发事件对象
              */
-            click: function(event) {},
+            click: function (event) { },
 
             /**
-             * 移除旧容器，可添加动画
-             * @param {any} $oldContainer 旧容器（jQuery对象）
+             * 准备修改页面内容
+             * @param {"replace"|"append"} loadType  加载页面内容形式（替换或者追加）
              */
-            removeOld: function($oldContainer) {
-                $oldContainer.remove();
+            beforChange: function (loadType) {
             },
 
             /**
-             * 显示新容器，可添加动画
-             * @param {any} $newContainer 新容器（jQuery对象）
+             * 页面处理完成方法
+             * @param {"replace"|"append"} loadType 加载页面内容形式（替换或者追加）
              */
-            showNew: function($newContainer) {
-                $newContainer.show("slow");
+            complete: function (loadType) {
             }
-        }
+        },
+
+        // 客户端默认版本号
+        clientVer: function () {
+            return $("meta").filter(function () {
+                var name = $(this).attr("http-equiv");
+                return name && name.toLowerCase() === "oss-pjax-ver";
+            }).attr("content");
+        },
     };
 ```
 
@@ -76,13 +76,20 @@
 
 在初始化节点信息后可以直接执行以下方法：
 
-1. 直接传递url地址加载
+1. 直接传递url地址加载替换
 
 ```javascript
-	$("#a—select-area").osspjax("http://请求地址");  
+	$("#a—select-area").osspjax("goTo","http://请求地址");  
 ```
 
-2. 获取加载状态信息
+2. 直接传递url地址加载（会直接在容器中追加新的内容
+
+```javascript
+	$("#a—select-area").osspjax("append","http://请求地址");  
+```
+
+
+3. 获取加载状态信息
 
 ```javascript
     // 可用来判断是否已经初始化，未初始化返回false，否则返状态对象

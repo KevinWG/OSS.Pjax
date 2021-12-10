@@ -1,23 +1,17 @@
 ﻿+function ($) {
     var defaultOption = {
+        // 浏览器状态修改方式， push会加入window.history， replace 不会
         push: true,
         replace: false,
+
+        // 加载地址时，是否去除url参数，可以自定义方法或如： function(reqUrl){ return "处理后的url"}
         noQuery: false,
 
-        // 客户端默认版本号
-        clientVer: function () {
-            return $("meta").filter(function () {
-                var name = $(this).attr("http-equiv");
-                return name && name.toLowerCase() === "oss-pjax-ver";
-            }).attr("content");
-        },
+        container: "#oss-wraper", // 控制容器，获取到的内容将插入当前元素内部
+        element: "a[oss-pjax-namespc='oss-pjax']",//  拦截的元素
 
-
-        wraper: "#oss-wraper",
-        fragment: "osspjax-container",
-
-        nameSpc: "oss-pjax",
-        element: "a[oss-pjax-namespc='oss-pjax']",
+        nameSpc: "oss-pjax", // 实例命名空间，当存在多个实例，特别是嵌套实例时必须不同，否则浏览器的回退前进操作可能混乱
+        loadingTemplate: '<div style="width:100%;margin-top:10;padding:10;text-align:center;">加载中</div>',
 
         ajaxSetting: {
             timeout: 0,
@@ -33,20 +27,26 @@
             click: function (event) { },
 
             /**
-             * 移除旧容器，可添加动画
-             * @param {any} $oldContainer 旧容器（jquery对象）
+             * 准备修改页面内容
+             * @param {"replace"|"append"} loadType  加载页面内容形式（替换或者追加）
              */
-            removeOld: function ($oldContainer) {
-                $oldContainer.remove();
+            beforChange: function (loadType) {
             },
 
             /**
-             * 显示新容器
-             * @param {any} $newContainer 新容器（jquery对象）
+             * 页面处理完成方法
+             * @param {"replace"|"append"} loadType 加载页面内容形式（替换或者追加）
              */
-            showNew: function ($newContainer) {
-                $newContainer.show("slow");
-            },
+            complete: function (loadType) {
+            }
+        },
+
+        // 客户端默认版本号
+        clientVer: function () {
+            return $("meta").filter(function () {
+                var name = $(this).attr("http-equiv");
+                return name && name.toLowerCase() === "oss-pjax-ver";
+            }).attr("content");
         },
     };
 
@@ -62,7 +62,7 @@
 
             var pageScripts = $('script');
 
-            con.scripts.each(function () {
+            con.$scripts.each(function () {
 
                 var nConItem = this;
                 var nId = nConItem["src"] || nConItem.id || nConItem.innerText;
@@ -89,7 +89,7 @@
         },
 
         /**
-         * 原生追加js方法（不使用jquery append方式）
+         * 原生追加js方法（不使用jquery append方式,否则每次发起xmlhttpreq）
          * @param  sNode 
          * @returns 
          */
@@ -117,7 +117,7 @@
         formatContent: function (html, opt, url, xhr) {
 
             var con = { origin: html, isFull: /<html/i.test(html) };
-            var $html = null, $content = null;
+            var $html = null, $container = null;
 
             if (con.isFull) {
 
@@ -130,31 +130,26 @@
                 var $body = $(this._parseHTML(html.match(/<body[^>]*>([\s\S.]*)<\/body>/i)[0]));
                 $html.append($body);
 
-                $content = this.filterAndFind($body, "." + opt.fragment).first();// $body.filter("." + opt.fragment).add($body.find("." + opt.fragment)).first();
-                if (!$content.length) {
-                    $content = $("<div class='" + opt.fragment + "'></div>");
-                    $content.append($body);
+                $container = this.filterAndFind($body, opt.container);
+                if (!$container.length) {
+                    $container = $("<div></div>").append($body);
                 }
-
             } else {
                 $html = $(this._parseHTML(html));
 
-                $content = this.filterAndFind($html, "." + opt.fragment).first();// $html.filter("." + opt.fragment).add($html.find("." + opt.fragment)).first();
-                if (!$content.length) {
-                    $html = $("<div class='" + opt.fragment + "'></div>").append($html);
-                    $content = $html;
+                $container = this.filterAndFind($html, opt.container).first();
+                if (!$container.length) {
+                    $container = $("<div></div>").append($html);
                 }
             }
 
-            con.title = this.filterAndFind($html, "title").last().remove().text();//$html.find("title").last().remove().text();
-            con.scripts = this.filterAndFind($html, "script").remove();// $html.find("script").remove();
+            con.$scripts = this.filterAndFind($html, "script").remove();
 
+            con.title = this.filterAndFind($html, "title").last().remove().text();
             if (!con.title)
-                con.title = $content.attr("title");
+                con.title = $container.attr("title");
 
-            $content.hide();
-
-            con.content = $content;
+            con.content = $container.html();
             con.version = xhr.getResponseHeader("oss-pjax-ver");
             con.url = url;
 
@@ -257,50 +252,55 @@
     * @param {any} url 请求地址
     * @returns {any}  promise对象
     */
-    function getContent(url, ossPjax) {
+    function getContent(ossPjax, url, loadType) {
         const opt = ossPjax._option;
         // 附加数据，版本号处理
         const ver = exeClientVersion(opt.clientVer) || "1.0";
 
         const realUrl = getRealReqUrl(ossPjax._option, url, ver);
-        const ajaxOpt = $.extend({}, { url: realUrl }, opt.ajaxSetting);
+        const ajaxOpt = $.extend({}, opt.ajaxSetting, { url: realUrl });
 
         abortXHR(ossPjax._xhr);
 
         //  处理ajax的beforeSend
         var oldBeforEvent = ajaxOpt.beforeSend;
-        ajaxOpt.beforeSend = function (x) {
+        ajaxOpt.beforeSend = function (x, p) {
+
             x.setRequestHeader("oss-pjax-ver", ver);
             x.setRequestHeader("oss-pjax", opt.nameSpc);
+
             if (oldBeforEvent && typeof oldBeforEvent == "function") {
-                oldBeforEvent();
+                oldBeforEvent.call(this, x, p);
             }
         }
 
+        startLoading(opt, loadType);
+
         var defer = $.Deferred();
         ossPjax._xhr = $.ajax(ajaxOpt).done(function (resData, textStatus, hr) {
-
             var con = pjaxHtmlHelper.formatContent(resData, opt, url, hr);
             defer.resolve(con);
-
         }).fail(function (hr, textStatus, errMsg) {
             defer.reject(errMsg, textStatus, hr);
+        }).always(function () {
+            removeLoading(opt);
         });
 
         return defer.promise();
-    };
+    }
 
     // 检测服务端返回版本信息
-    function checkServerContentVsersion(ossPjax, con) {
-        const cF = ossPjax._option.clientVer;
-        var clientVer = exeClientVersion(cF);
-        if (!clientVer) {
-            ossPjax._option.clientVer = con.version;
+    function checkResponseVsersion(option, con) {
+        const cVer = option.clientVer;
+        var clientVal = exeClientVersion(cVer);
+
+        if (!clientVal) {
+            option.clientVer = con.version;
             return;
         }
 
         //  版本不同，或者内容不存在
-        if ((con.version && con.version !== clientVer) || !con.content) {
+        if ((con.version && con.version !== clientVal) || !con.content) {
             forceTo(con.url, con.version);
         }
     }
@@ -327,33 +327,71 @@
         return url;
     }
 
-
-    function replaceContent(ossPjax, con) {
-        var opt = ossPjax._option;
-        var $wraper = $(opt.wraper);
-
-        var $oldContainer = $wraper.find("." + opt.fragment);
-        if ($.contains($oldContainer, document.activeElement)) {
-            try {
-                document.activeElement.blur();
-            } catch (e) { }
+    function startLoading(option, loadType) {
+        if (!option.loadingTemplate) {
+            return;
         }
+
+        const $loading = $(option.loadingTemplate);
+        $loading.attr("oss-pjax-loading", "true");
+
+        const $container = $(option.container);
+        if (loadType == "replace")
+            $container.html($loading);
+        else {
+            $container.append($loading);
+        }
+    }
+    function removeLoading(option) {
+        if (!option.loadingTemplate) {
+            return;
+        }
+        $(option.container).find("[oss-pjax-loading='true']").remove();
+    }
+
+
+
+    /**
+     *  替换内容
+     * @param {any} opt     参数配置
+     * @param {any} con     需要加载的相关内容
+     * @param {"replace"|"append"} loadType 加载页面内容形式（替换或者追加）
+     */
+    function loadContent(opt, con, loadType) {
+
+        const $container = $(opt.container);
+        const isReplace = loadType == "replace";
+
+        // 准备加载事件
+        opt.methods.beforChange(loadType);
+
+        // 清理目标( 追加类型不需要
+        if (isReplace)
+            $container.html("");
+
         // 替换标题
         if (con.title && (opt.push || opt.replace))
             document.title = con.title;
-        // 清理目标
-        opt.methods.removeOld($oldContainer);
+
         // 追加新内容
-        $wraper.append(con.content);
-        // 过滤安装脚本
-        pjaxHtmlHelper.filterScripts(con, opt);
+        $container.append(con.content);
+
+        // 过滤安装脚本（追加模式下不会执行
+        if (isReplace)
+            pjaxHtmlHelper.filterScripts(con, opt);
+
         // 展示
-        opt.methods.showNew(con.content);
+        opt.methods.complete(loadType);
     }
+
+
+
+
+
     //  ===========  请求处理 end ============
 
     const OssPjax = function ($ele, opt) {
-        var self = this;
+        const self = this;
         self._option = opt;
 
         // 设置初始页的页面状态值
@@ -369,6 +407,14 @@
     // 实例属性： state 是当前页面信息，   xhr 远程请求实体信息
     // 原型属性： haveSysVerCheck  是否已经开启服务器版本检查
     OssPjax.prototype = {
+
+        _pageState: null,
+        _deepLevel: 0,
+        _sysVerCheckCount: 0,
+        _option: null, // 用来保存配置信息
+        _xhr: null, // 保存请求中信息
+
+
         click: function (event) {
             var url = formatLinkEvent(event);
             if (!url)
@@ -382,44 +428,39 @@
             preventDefault(event);
         },
 
-        goTo: function (url) {
-            this._interGoTo(url);
-        },
+        append: function (url) {
 
-        /**
-         * 获取或者设置当前的页面State
-         * @param {any} action 动作
-         * @param {any} state 页面对像
-         * @returns {any} 如果指定动作和对象不为空，返回操作成功与否。否则返回当前页面对象
-         */
-        state: function (action, state) {
-            if (action && state && state.url) {
-                if (action === "pushState") {
-                    window.history.pushState(state, state.title, state.url);
-                } else {
-                    window.history.replaceState(state, state.title, state.url);
-                }
-                setPageState(this, null, state);
-                return true;
-            }
-            return this._pageState;
+            const opt = this._option;
+            const loadType = "append";
+
+            getContent(ossPjax, url, loadType).done(function (con) {
+
+                checkResponseVsersion(opt, con);
+
+                loadContent(opt, con, loadType);
+
+            }).fail(function (errMsg, textStatus, hr) {
+                forceTo(url);
+            });
         },
 
         forceTo: function (url) {
             forceTo(url);
         },
 
-        _pageState: null,
-        _deepLevel: 0,
-        _sysVerCheckCount: 0,
-        _option: null, // 用来保存配置信息
-        _xhr: null, // 保存请求中信息
+        goTo: function (url) {
+            this._interGoTo(url);
+        },
 
         _interGoTo: function (url, popedState) {
+
             const ossPjax = this;
-            getContent(url, ossPjax).done(function (con) {
-                checkServerContentVsersion(ossPjax, con);
+            const loadType = "replace";
+
+            getContent(ossPjax, url, loadType).done(function (con) {
+
                 const opt = ossPjax._option;
+                checkResponseVsersion(opt, con);
 
                 if (!popedState) {
                     // 正常浏览器请求
@@ -433,11 +474,31 @@
                 } else {
                     setPageState(ossPjax, null, popedState);
                 }
-                replaceContent(ossPjax, con);
+
+                loadContent(opt, con, loadType);
 
             }).fail(function (errMsg, textStatus, hr) {
                 forceTo(url);
             });
+        },
+
+        /**
+         * 获取或者设置当前的页面State
+         * @param {any} action  修改浏览器state的动作（pushState|replaceState）
+         * @param {any} state   osspjax 页面状态对象
+         * @returns {any}       如果未传值动作返回当前osspjax状态对象，否则返回执行动作成功与否
+         */
+        state: function (action, state) {
+            if (action && state && state.url) {
+                if (action === "pushState") {
+                    window.history.pushState(state, state.title, state.url);
+                } else {
+                    window.history.replaceState(state, state.title, state.url);
+                }
+                setPageState(this, null, state);
+                return true;
+            }
+            return this._pageState;
         }
     };
 
@@ -457,18 +518,17 @@
         return window._oss_pjax_PageState = instance._pageState = state;
     }
     /**
-  * 创建页面置换状态
-  * @param {any} title
-  * @param {any} url
-  */
+    * 创建页面置换状态
+    * @param {any} title
+    * @param {any} url
+    */
     function createState(newContent, nameSpc) {
-        var newState = {
+        return {
             id: new Date().getTime(),
             nameSpc: nameSpc,
             title: newContent.title || document.title,
             url: newContent.url || document.URL
         };
-        return newState;
     }
 
     function addPopHandler(nameSpc, handler) {
@@ -508,8 +568,6 @@
     //  =============  页面State处理 End ============
 
     function fnPjax(option) {
-
-
 
         const $this = this;
         const dataName = "oss.pjax";
