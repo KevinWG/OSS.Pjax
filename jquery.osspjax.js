@@ -1,4 +1,4 @@
-﻿+function ($) {
+﻿+ function ($) {
     var defaultOption = {
         // 浏览器状态修改方式， push会加入window.history， replace 不会
         push: true,
@@ -11,7 +11,7 @@
         element: "a[oss-pjax-namespc='oss-pjax']",
 
         nameSpc: "oss-pjax",
-        loadingTemplate: '<div style="width:100%;margin-top:10;padding:10;text-align:center;">加载中</div>',
+        loadingTemplate: '<div style="width:100%;margin-top:16px;text-align:center;color: #666666">加载中...</div>',
 
         ajaxSetting: {
             timeout: 0,
@@ -24,21 +24,19 @@
              *  点击事件，   可以通过 event.preventDefault()取消后续执行
              * @param {any} event 触发事件对象
              */
-            click: function (event) { },
+            click: function (event) {},
 
             /**
              * 准备修改页面内容
              * @param {"replace"|"append"} loadType  加载页面内容形式（替换或者追加）
              */
-            beforChange: function (loadType) {
-            },
+            beforChange: function (loadType) {},
 
             /**
              * 页面处理完成方法
              * @param {"replace"|"append"} loadType 加载页面内容形式（替换或者追加）
              */
-            complete: function (loadType) {
-            }
+            complete: function (loadType) {}
         },
 
         // 客户端默认版本号
@@ -116,18 +114,18 @@
          */
         formatContent: function (html, opt, url, xhr) {
 
-            var con = { origin: html, isFull: /<html/i.test(html) };
-            var $html = null, $container = null;
+            let con = { origin: html, isFull: /<html/i.test(html) };
+            let $html = null , $container = null;
 
             if (con.isFull) {
 
                 $html = $("<div></div>");
 
-                var head = html.match(/<head[^>]*>([\s\S.]*)<\/head>/i);
+                const head = html.match(/<head[^>]*>([\s\S.]*)<\/head>/i);
                 if (head) {
                     $html.append($(this._parseHTML(head[0])));
                 }
-                var $body = $(this._parseHTML(html.match(/<body[^>]*>([\s\S.]*)<\/body>/i)[0]));
+                let $body = $(this._parseHTML(html.match(/<body[^>]*>([\s\S.]*)<\/body>/i)[0]));
                 $html.append($body);
 
                 $container = this.filterAndFind($body, opt.container);
@@ -182,10 +180,10 @@
     }
 
     /**
-    *  验证链接
-    * @param {any} event   链接元素
+     *  验证链接
+     * @param {any} event   链接元素
      * @return  false-停止Pjax，执行原生。   {} Pjax执行需要的地址信息
-    */
+     */
     function formatLinkEvent(event) {
         var link = event.currentTarget;
         if (!link)
@@ -248,17 +246,19 @@
     }
 
     /**
-    *  获取内容
-    * @param {any} url 请求地址
-    * @returns {any}  promise对象
-    */
+     *  获取内容
+     * @param {any} url 请求地址
+     * @returns {any}  promise对象
+     */
     function getContent(ossPjax, url, loadType) {
         const opt = ossPjax._option;
         // 附加数据，版本号处理
         const ver = exeClientVersion(opt.clientVer) || "1.0";
 
         const realUrl = getRealReqUrl(ossPjax._option, url, ver);
-        const ajaxOpt = $.extend({}, opt.ajaxSetting, { url: realUrl });
+        const ajaxOpt = $.extend({}, opt.ajaxSetting, {
+            url: realUrl
+        });
 
         abortXHR(ossPjax._xhr);
 
@@ -316,7 +316,7 @@
     function appVersionToUrl(url, v) {
         if (v) {
             if (url.indexOf("_opv=") > 0) {
-                url = url.replace(/(_opv=).*?(&)/, "$1" + v + '$2');
+                url = url.replace(/([\?|&]_opv=)([^&]*)/i, "$1" + v);
             } else {
                 if (url.indexOf("?") < 0)
                     url += "?_opv=" + v;
@@ -342,6 +342,7 @@
             $container.append($loading);
         }
     }
+
     function removeLoading(option) {
         if (!option.loadingTemplate) {
             return;
@@ -518,10 +519,10 @@
         return window._oss_pjax_PageState = instance._pageState = state;
     }
     /**
-    * 创建页面置换状态
-    * @param {any} title
-    * @param {any} url
-    */
+     * 创建页面置换状态
+     * @param {any} title
+     * @param {any} url
+     */
     function createState(newContent, nameSpc) {
         return {
             id: new Date().getTime(),
@@ -546,8 +547,8 @@
                 let handlerSpc = pageState.nameSpc;
                 let curState = window._oss_pjax_PageState;
 
-                if (pageState.nameSpc !== curState.nameSpc
-                    && pageState._deepLevel > curState._deepLevel)
+                if (pageState.nameSpc !== curState.nameSpc &&
+                    pageState._deepLevel > curState._deepLevel)
                     handlerSpc = curState.nameSpc;
 
                 const h = this.popHandlers[handlerSpc];
@@ -587,16 +588,14 @@
             } else {
                 throw "方法不存在，或者命名空间" + cacheData._option.nameSpc + "已经在当前元素挂载osspjax控件！";
             }
-        }
-        else if (typeof option == "string") {
+        } else if (typeof option == "string") {
 
             const args = Array.apply(null, arguments);
             args.shift(); // 排除 option 本身
 
             if (cacheData && typeof cacheData[option] == "function") {
                 return cacheData[option].apply(cacheData, args);
-            }
-            else if (!cacheData && option == "state") {
+            } else if (!cacheData && option == "state") {
                 return false;
             }
         }
